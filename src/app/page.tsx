@@ -6,9 +6,9 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
-import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, NotebookPen, PlusCircle, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity, BrainCircuit, Settings2, ShieldCheck } from 'lucide-react';
+import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, NotebookPen, PlusCircle, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity, BrainCircuit } from 'lucide-react';
 import Link from 'next/link';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { LoginDialog } from '@/components/auth/LoginDialog';
 
 export default function DashboardRedesignPage() {
@@ -81,7 +81,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={NotebookPen}
                 cardVariant="page"
                 primaryActionLabel="Create"
-                href="/actions/create-subject-notes" // Example link
+                href="/actions/create-subject-notes" 
               />
               <NewActionCard
                 title="Add Subject"
@@ -221,32 +221,49 @@ export default function DashboardRedesignPage() {
             </div>
           </section>
 
-          {/* Pinned Items Section */}
+          {/* Tasks Assigned to You Section */}
           <section className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Pin className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-2xl font-semibold">Pinned Items</h2>
+                <h2 className="text-2xl font-semibold">Tasks assigned to you</h2>
                 <ChevronDown className="h-5 w-5 text-muted-foreground cursor-pointer" />
               </div>
               <Button variant="ghost" size="sm" asChild className="text-sm text-muted-foreground hover:text-foreground">
-                <Link href="#">
-                  Pin a new item
-                  <Plus className="ml-2 h-4 w-4" />
+                <Link href="#"> {/* Replace # with the link to the "all tasks" page */}
+                  View all
                 </Link>
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              <Card className="h-40 flex flex-col items-center justify-center shadow-sm hover:shadow-md transition-shadow rounded-lg bg-card">
-                <CardContent className="flex flex-col items-center justify-center text-center p-4">
-                  <Pin className="h-8 w-8 text-muted-foreground mb-2" />
-                  <Button variant="ghost" size="sm" className="text-sm text-muted-foreground">
-                    <Plus className="mr-2 h-4 w-4" /> Pin an item
-                  </Button>
-                </CardContent>
+              <Card className="h-40 rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col justify-between">
+                <div>
+                  <h3 className="font-semibold text-md">Finalize Q3 Report</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Project Alpha</p>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Due: Oct 28</span>
+                  {/* Optional: Add a small avatar or status indicator here */}
+                </div>
               </Card>
-              <Card className="h-40 rounded-lg bg-muted/50"></Card>
-              <Card className="h-40 rounded-lg bg-muted/50"></Card>
+              <Card className="h-40 rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col justify-between">
+                <div>
+                  <h3 className="font-semibold text-md">User Persona Workshop</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Marketing Campaign</p>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Due: Nov 05</span>
+                </div>
+              </Card>
+              <Card className="h-40 rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col justify-between">
+                <div>
+                  <h3 className="font-semibold text-md">Develop API Endpoint</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Platform Upgrade</p>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Due: Nov 12</span>
+                </div>
+              </Card>
             </div>
           </section>
 
