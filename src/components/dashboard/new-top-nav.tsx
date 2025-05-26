@@ -24,7 +24,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/', label: 'Overview', exact: true },
   { href: '/tasks', label: 'Tasks', count: 1, exact: true },
-  { href: '/activity', label: 'Activity', count: 1, exact: true },
+  { href: '/activity', label: 'Activity', exact: true },
   { href: '/functioning', label: 'Functioning', exact: true },
 ];
 
