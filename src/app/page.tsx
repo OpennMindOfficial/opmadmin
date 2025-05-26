@@ -21,14 +21,8 @@ export default function DashboardRedesignPage() {
   };
 
   useEffect(() => {
-    // This effect ensures that if for some reason the component re-renders
-    // and the user is not authenticated, the dialog is reshown.
-    // It primarily handles edge cases or programmatic changes to showLoginDialog.
     if (!isAuthenticated && !showLoginDialog) {
-        // To strictly enforce login, if the dialog was closed without authenticating,
-        // and the state somehow reflects that (e.g. dev tools, or complex state change),
-        // we can force it back open. However, the initial state (true) usually handles this.
-        // setShowLoginDialog(true); // Uncomment if you observe issues where dialog doesn't show when it should.
+      //setShowLoginDialog(true); // Ensure dialog re-appears if closed without auth
     }
   }, [isAuthenticated, showLoginDialog]);
 
@@ -38,15 +32,9 @@ export default function DashboardRedesignPage() {
       <LoginDialog 
         isOpen={showLoginDialog} 
         onOpenChange={(isOpen) => {
-          // If the user closes the dialog (e.g., pressing Esc) without logging in,
-          // and we want to prevent access, we ensure `showLoginDialog` remains true
-          // or we don't change it based on `isOpen` unless it's a successful login.
-          // For now, allowing onOpenChange to set it, but if login is mandatory,
-          // this might need stricter control or rely on `isAuthenticated` solely.
           if (!isOpen && !isAuthenticated) {
             // User tried to close dialog without logging in.
             // Keep dialog mandatory by not setting showLoginDialog to false.
-            // Or, simply let the existing logic handle it (if they close, main content is not rendered).
           } else {
             setShowLoginDialog(isOpen);
           }
@@ -93,18 +81,21 @@ export default function DashboardRedesignPage() {
                 description="Create your first Client to start building your Clients knowledge base."
                 imageHint="documents ui interface cards" 
                 actionIcon={FilePlus} 
+                cardVariant="page"
               />
               <NewActionCard
                 title="Create a Task"
                 description="Create your first Case to start building your Cases knowledge base."
                 imageHint="task list checkbox"
-                actionIcon={Plus} 
+                actionIcon={Plus}
+                cardVariant="task"
               />
               <NewActionCard
                 title="Create a Thread"
                 description="Create your first Client to start building your Clients knowledge base."
                 imageHint="chat bubbles conversation"
-                actionIcon={MessageSquare} 
+                actionIcon={MessageSquare}
+                cardVariant="thread"
               />
             </div>
           </section>
@@ -158,8 +149,6 @@ export default function DashboardRedesignPage() {
         isOpen={!isAuthenticated} 
         onOpenChange={(isOpen) => {
           if (!isOpen && !isAuthenticated) {
-            // Do not change showLoginDialog if user attempts to close without logging in
-            // This ensures the dialog remains modal if authentication is pending.
             return; 
           }
           setShowLoginDialog(isOpen); 
