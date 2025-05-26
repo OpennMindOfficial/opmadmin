@@ -4,17 +4,17 @@ import { Progress } from '@/components/ui/progress';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 
-export function ProgressCard({ courseName, progressPercentage, imageUrl }: CourseProgress) {
+export function ProgressCard({ courseName, progressPercentage, imageUrl, dataAiHint }: CourseProgress) {
   return (
     <Card className="shadow-lg rounded-xl overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
       {imageUrl && (
          <div className="relative w-full h-40">
-            <Image 
-                src={imageUrl} 
-                alt={courseName} 
-                layout="fill" 
-                objectFit="cover" 
-                data-ai-hint="course education"
+            <Image
+                src={imageUrl}
+                alt={courseName}
+                layout="fill"
+                objectFit="cover"
+                data-ai-hint={dataAiHint || "course education"}
             />
          </div>
       )}

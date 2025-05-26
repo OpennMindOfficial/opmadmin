@@ -81,6 +81,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={NotebookPen}
                 cardVariant="page"
                 primaryActionLabel="Create"
+                href="/actions/create-subject-notes" // Example link
               />
               <NewActionCard
                 title="Add Subject"
@@ -89,6 +90,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={PlusCircle}
                 cardVariant="task"
                 primaryActionLabel="Add"
+                href="/actions/add-subject"
               />
               <NewActionCard
                 title="View Reported Bugs"
@@ -97,6 +99,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={Bug}
                 cardVariant="data"
                 primaryActionLabel="View"
+                href="/actions/view-bugs"
               />
               <NewActionCard
                 title="Edit About Us"
@@ -105,6 +108,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={FileText}
                 cardVariant="content"
                 primaryActionLabel="Edit"
+                href="/actions/edit-about-us"
               />
                <NewActionCard
                 title="Add Facts"
@@ -113,6 +117,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={ListPlus}
                 cardVariant="task"
                 primaryActionLabel="Add"
+                href="/actions/add-facts"
               />
               <NewActionCard
                 title="Performance Tracking"
@@ -121,6 +126,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={BarChart3}
                 cardVariant="data"
                 primaryActionLabel="Analyze"
+                href="/actions/performance-tracking"
               />
               <NewActionCard
                 title="Add Questions to QB"
@@ -129,6 +135,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={FileQuestion}
                 cardVariant="page"
                 primaryActionLabel="Add"
+                href="/actions/add-questions"
               />
               <NewActionCard
                 title="NCERT Sources"
@@ -137,6 +144,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={Library}
                 cardVariant="content"
                 primaryActionLabel="Manage"
+                href="/actions/ncert-sources"
               />
               <NewActionCard
                 title="User's Account Data"
@@ -145,6 +153,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={Users}
                 cardVariant="account"
                 primaryActionLabel="Manage"
+                href="/actions/user-accounts"
               />
               <NewActionCard
                 title="Pro Users"
@@ -153,6 +162,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={Star}
                 cardVariant="account"
                 primaryActionLabel="Manage"
+                href="/actions/pro-users"
               />
                <NewActionCard
                 title="API in Use"
@@ -161,6 +171,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={PlugZap}
                 cardVariant="server"
                 primaryActionLabel="Monitor"
+                href="/actions/api-status"
               />
               <NewActionCard
                 title="API Testing"
@@ -169,6 +180,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={TestTube2}
                 cardVariant="server"
                 primaryActionLabel="Test"
+                href="/actions/api-testing"
               />
               <NewActionCard
                 title="Account Changes (User)"
@@ -177,6 +189,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={UserCog}
                 cardVariant="account"
                 primaryActionLabel="Review"
+                href="/actions/account-changes"
               />
               <NewActionCard
                 title="Add Notifications"
@@ -185,6 +198,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={BellPlus}
                 cardVariant="communication"
                 primaryActionLabel="Create"
+                href="/actions/add-notifications"
               />
               <NewActionCard
                 title="Website Traffic"
@@ -193,6 +207,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={Activity}
                 cardVariant="data"
                 primaryActionLabel="Analyze"
+                href="/actions/website-traffic"
               />
               <NewActionCard
                 title="AI Usage"
@@ -201,6 +216,7 @@ export default function DashboardRedesignPage() {
                 actionIcon={BrainCircuit}
                 cardVariant="data"
                 primaryActionLabel="Track"
+                href="/actions/ai-usage"
               />
             </div>
           </section>
@@ -264,4 +280,3 @@ export default function DashboardRedesignPage() {
       />
   );
 }
-

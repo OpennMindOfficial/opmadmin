@@ -1,5 +1,5 @@
-
 // src/components/dashboard/new-action-card.tsx
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw, type LucideIcon } from 'lucide-react';
@@ -7,17 +7,17 @@ import { cn } from '@/lib/utils';
 
 export type CardVariant = 'page' | 'task' | 'thread' | 'data' | 'content' | 'account' | 'server' | 'communication' | 'system';
 
-
 interface NewActionCardProps {
   title: string;
   description: string;
   imageHint: string;
   actionIcon: LucideIcon;
   cardVariant: CardVariant;
-  primaryActionLabel: string; // New prop
+  primaryActionLabel: string;
+  href?: string; // New prop for navigation
 }
 
-export function NewActionCard({ title, description, imageHint, actionIcon: ActionIcon, cardVariant, primaryActionLabel }: NewActionCardProps) {
+export function NewActionCard({ title, description, imageHint, actionIcon: ActionIcon, cardVariant, primaryActionLabel, href }: NewActionCardProps) {
 
   const FannedElement = ({ className, children }: { className?: string; children: React.ReactNode }) => (
     <div className={cn("absolute w-[70px] h-[42px] rounded-md border bg-card shadow-sm p-1.5", className)}>
@@ -31,7 +31,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     </div>
   );
 
-  const PageVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => ( // e.g. Create Subject Notes, Add Questions to QB
+  const PageVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
       <FannedElement className="transform -rotate-[12deg] translate-x-[5px] translate-y-[12px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="h-1 w-3/4 bg-muted-foreground/10 mb-1 rounded-sm"></div>
@@ -52,7 +52,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     </>
   );
 
-  const TaskVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => ( // e.g. Add Subject, Add Facts
+  const TaskVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
       <FannedElement className="transform rotate-[12deg] -translate-x-[5px] translate-y-[12px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="flex items-center mb-1">
@@ -92,7 +92,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     </>
   );
 
-  const ThreadVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => ( // Generic communication or misc
+  const ThreadVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
       <FannedElement className="transform -rotate-[12deg] translate-x-[5px] translate-y-[10px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="flex items-center mb-1">
@@ -121,7 +121,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     </>
   );
 
-  const DataVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => ( // e.g. View Reported Bugs, Performance Tracking, Website traffic, AI Usage
+  const DataVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
       <FannedElement className="transform -rotate-[10deg] translate-x-[4px] translate-y-[11px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="h-1 w-1/3 bg-muted-foreground/10 rounded-sm mb-0.5"></div>
@@ -153,7 +153,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     </>
   );
 
-  const ContentVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => ( // e.g. Edit About US, NCERT Sources
+  const ContentVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
       <FannedElement className="transform -rotate-[11deg] translate-x-[5px] translate-y-[12px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="h-1 w-1/2 bg-muted-foreground/10 mb-1 rounded-sm"></div>
@@ -177,7 +177,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     </>
   );
 
-  const AccountVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => ( // e.g. User's account data, Pro users, Account Changes(user)
+  const AccountVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
       <FannedElement className="transform rotate-[10deg] -translate-x-[4px] translate-y-[11px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="flex items-center mb-1">
@@ -207,7 +207,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     </>
   );
 
-  const ServerVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => ( // e.g. API in use, API Testing
+  const ServerVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
       <FannedElement className="transform -rotate-[9deg] translate-x-[5px] translate-y-[12px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="w-full h-1.5 bg-muted-foreground/10 rounded-sm mb-1 flex items-center space-x-1 px-0.5">
@@ -237,7 +237,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     </>
   );
 
-  const CommunicationVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => ( // e.g. Add Notifications
+  const CommunicationVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
        <FannedElement className="transform -rotate-[12deg] translate-x-[5px] translate-y-[10px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="flex items-start mb-0.5">
@@ -269,7 +269,6 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     </>
   );
 
-  // Default/System Visuals (can be similar to 'page' or simpler)
   const SystemVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
       <FannedElement className="transform -rotate-[12deg] translate-x-[5px] translate-y-[12px] opacity-50 z-0 right-[28px] top-[18px]">
@@ -317,6 +316,13 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
 
   const showPlusIcon = primaryActionLabel === "Create" || primaryActionLabel === "Add";
 
+  const PrimaryButton = () => (
+    <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground">
+      {showPlusIcon && <Plus className="mr-2 h-4 w-4" />}
+      {primaryActionLabel}
+    </Button>
+  );
+
   return (
     <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 rounded-lg overflow-hidden flex flex-col bg-card">
       <div className="relative h-36 grid-background flex items-center justify-center p-4 overflow-hidden" data-ai-hint={imageHint}>
@@ -329,10 +335,13 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
         <CardDescription className="text-sm text-muted-foreground">{description}</CardDescription>
       </CardContent>
       <CardFooter className="flex-col items-start space-y-3 pt-0 pb-4 px-4 sm:flex-row sm:space-y-0 sm:space-x-2 sm:items-center">
-        <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground">
-          {showPlusIcon && <Plus className="mr-2 h-4 w-4" />}
-          {primaryActionLabel}
-        </Button>
+        {href ? (
+          <Link href={href} passHref legacyBehavior>
+            <a className="w-full sm:w-auto"><PrimaryButton /></a>
+          </Link>
+        ) : (
+          <PrimaryButton />
+        )}
         <Button variant="ghost" className="w-full sm:w-auto text-muted-foreground hover:text-foreground">
           <RefreshCw className="mr-2 h-3 w-3" /> Example
         </Button>

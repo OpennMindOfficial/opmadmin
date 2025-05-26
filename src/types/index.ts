@@ -5,7 +5,7 @@ export interface Metric {
   title: string;
   value: string;
   icon: LucideIcon;
-  trend?: string; 
+  trend?: string;
   trendDirection?: 'up' | 'down' | 'neutral';
 }
 
@@ -14,6 +14,7 @@ export interface CourseProgress {
   courseName: string;
   progressPercentage: number;
   imageUrl?: string;
+  dataAiHint?: string;
 }
 
 export interface CourseStatus {
@@ -21,7 +22,7 @@ export interface CourseStatus {
   courseName: string;
   instructor: string;
   status: "Completed" | "In Progress" | "Not Started";
-  enrolledDate: string; 
+  enrolledDate: string;
   thumbnailUrl?: string;
   dataAiHint?: string;
 }

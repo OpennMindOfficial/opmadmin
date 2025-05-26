@@ -42,11 +42,11 @@ export function CourseStatusTable() {
             <TableRow key={course.id}>
               <TableCell>
                 {course.thumbnailUrl && (
-                  <Image 
-                    src={course.thumbnailUrl} 
-                    alt={course.courseName} 
-                    width={80} 
-                    height={48} 
+                  <Image
+                    src={course.thumbnailUrl}
+                    alt={course.courseName}
+                    width={80}
+                    height={48}
                     className="rounded-md object-cover"
                     data-ai-hint={course.dataAiHint || "education course"}
                   />
