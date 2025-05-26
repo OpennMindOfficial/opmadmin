@@ -11,8 +11,8 @@ export default {
   theme: {
   	extend: {
       fontFamily: {
-        sans: ['var(--font-geist-sans)', ...fontFamily.sans],
-        mono: ['var(--font-geist-mono)', ...fontFamily.mono],
+        sans: ['var(--font-poppins)', ...fontFamily.sans], // Changed to Poppins
+        mono: ['var(--font-geist-mono)', ...fontFamily.mono], // Kept Geist for mono, can be changed if needed
       },
   		colors: {
   			background: 'hsl(var(--background))',
@@ -55,7 +55,7 @@ export default {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			},
-  			sidebar: {
+  			sidebar: { // Kept for other potential uses, though not for this specific dashboard page
   				DEFAULT: 'hsl(var(--sidebar-background))',
   				foreground: 'hsl(var(--sidebar-foreground))',
   				primary: 'hsl(var(--sidebar-primary))',

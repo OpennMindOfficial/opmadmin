@@ -1,8 +1,6 @@
-"use client";
+// This file is no longer used by the main dashboard page as per the new design.
+// Its content can be removed or repurposed. RootLayout now directly renders children.
 
-import type { ReactNode } from 'react';
-import { AppLayout } from './app-layout';
-
-export function ClientAppLayout({ children }: { children: ReactNode }) {
-  return <AppLayout>{children}</AppLayout>;
+export function ClientAppLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>; // Minimal passthrough if still imported somewhere, otherwise can be empty.
 }

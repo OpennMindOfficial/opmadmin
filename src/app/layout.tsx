@@ -1,21 +1,17 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Poppins } from 'next/font/google'; // Changed from Geist to Poppins
 import './globals.css';
-import { ClientAppLayout } from '@/components/layout/client-app-layout';
+import { Toaster } from "@/components/ui/toaster"; // Keep Toaster for notifications
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const poppins = Poppins({
+  variable: '--font-poppins',
   subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'], // Added weights as commonly used
 });
 
 export const metadata: Metadata = {
-  title: 'OpennMind Dashboard',
-  description: 'Dashboard for OpennMind Education',
+  title: 'OpennMind Dashboard', // Kept existing title
+  description: 'Task Management Dashboard', // Updated description
 };
 
 export default function RootLayout({
@@ -25,8 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ClientAppLayout>{children}</ClientAppLayout>
+      <body className={`${poppins.variable} font-sans antialiased`}>
+        {children}
+        <Toaster />
       </body>
     </html>
   );
