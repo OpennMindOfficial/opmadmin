@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
-import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, MessageSquare, FilePlus } from 'lucide-react'; 
+import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, NotebookPen, PlusCircle, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity, BrainCircuit, Settings2, ShieldCheck } from 'lucide-react'; 
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { LoginDialog } from '@/components/auth/LoginDialog'; 
@@ -21,9 +21,7 @@ export default function DashboardRedesignPage() {
   };
 
   useEffect(() => {
-    if (!isAuthenticated && !showLoginDialog) {
-      //setShowLoginDialog(true); // Ensure dialog re-appears if closed without auth
-    }
+    // This effect can be used to manage dialog visibility based on auth state if needed
   }, [isAuthenticated, showLoginDialog]);
 
 
@@ -73,29 +71,120 @@ export default function DashboardRedesignPage() {
           <section className="space-y-6">
             <div className="flex items-center space-x-2">
               <Sparkles className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-semibold">Actions</h2>
+              <h2 className="text-2xl font-semibold">Quick Actions & Management</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               <NewActionCard
-                title="Create a Page"
-                description="Create your first Client to start building your Clients knowledge base."
-                imageHint="documents ui interface cards" 
-                actionIcon={FilePlus} 
+                title="Create Subject Notes"
+                description="Draft and organize notes for various subjects."
+                imageHint="notes education" 
+                actionIcon={NotebookPen} 
                 cardVariant="page"
               />
               <NewActionCard
-                title="Create a Task"
-                description="Create your first Case to start building your Cases knowledge base."
-                imageHint="task list checkbox"
-                actionIcon={Plus}
+                title="Add Subject"
+                description="Introduce a new subject to the curriculum."
+                imageHint="subject plus"
+                actionIcon={PlusCircle}
                 cardVariant="task"
               />
               <NewActionCard
-                title="Create a Thread"
-                description="Create your first Client to start building your Clients knowledge base."
-                imageHint="chat bubbles conversation"
-                actionIcon={MessageSquare}
-                cardVariant="thread"
+                title="View Reported Bugs"
+                description="Track and manage software bugs reported by users."
+                imageHint="bug report"
+                actionIcon={Bug}
+                cardVariant="data"
+              />
+              <NewActionCard
+                title="Edit About Us"
+                description="Update the 'About Us' section of the platform."
+                imageHint="content edit"
+                actionIcon={FileText}
+                cardVariant="content"
+              />
+               <NewActionCard
+                title="Add Facts"
+                description="Contribute interesting facts to the knowledge base."
+                imageHint="fact list"
+                actionIcon={ListPlus}
+                cardVariant="task"
+              />
+              <NewActionCard
+                title="Performance Tracking"
+                description="Analyze user performance and engagement metrics."
+                imageHint="analytics chart"
+                actionIcon={BarChart3}
+                cardVariant="data"
+              />
+              <NewActionCard
+                title="Add Questions to QB"
+                description="Expand the question bank with new entries."
+                imageHint="question bank"
+                actionIcon={FileQuestion}
+                cardVariant="page"
+              />
+              <NewActionCard
+                title="NCERT Sources"
+                description="Manage and reference NCERT educational materials."
+                imageHint="education book"
+                actionIcon={Library}
+                cardVariant="content"
+              />
+              <NewActionCard
+                title="User's Account Data"
+                description="Access and manage individual user account details."
+                imageHint="user profile"
+                actionIcon={Users}
+                cardVariant="account"
+              />
+              <NewActionCard
+                title="Pro Users"
+                description="View and manage premium user accounts."
+                imageHint="premium star"
+                actionIcon={Star}
+                cardVariant="account"
+              />
+               <NewActionCard
+                title="API in Use"
+                description="Monitor and manage currently active APIs."
+                imageHint="api connection"
+                actionIcon={PlugZap}
+                cardVariant="server"
+              />
+              <NewActionCard
+                title="API Testing"
+                description="Perform tests and diagnostics on API endpoints."
+                imageHint="test development"
+                actionIcon={TestTube2}
+                cardVariant="server"
+              />
+              <NewActionCard
+                title="Account Changes (User)"
+                description="Review recent modifications to user accounts."
+                imageHint="user settings"
+                actionIcon={UserCog}
+                cardVariant="account"
+              />
+              <NewActionCard
+                title="Add Notifications"
+                description="Create and dispatch platform notifications to users."
+                imageHint="alert message"
+                actionIcon={BellPlus}
+                cardVariant="communication"
+              />
+              <NewActionCard
+                title="Website Traffic"
+                description="Analyze data on website visits and user flow."
+                imageHint="analytics traffic"
+                actionIcon={Activity}
+                cardVariant="data"
+              />
+              <NewActionCard
+                title="AI Usage"
+                description="Track metrics related to AI feature utilization."
+                imageHint="ai brain"
+                actionIcon={BrainCircuit}
+                cardVariant="data"
               />
             </div>
           </section>
@@ -149,6 +238,8 @@ export default function DashboardRedesignPage() {
         isOpen={!isAuthenticated} 
         onOpenChange={(isOpen) => {
           if (!isOpen && !isAuthenticated) {
+            // User trying to close unauthenticated dialog
+            // Potentially add a small shake animation or visual cue here if desired
             return; 
           }
           setShowLoginDialog(isOpen); 
@@ -157,3 +248,4 @@ export default function DashboardRedesignPage() {
       />
   );
 }
+
