@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
-import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, MessageSquare } from 'lucide-react';
+import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, MessageSquare, FilePlus } from 'lucide-react'; // Added FilePlus for "Create a Page"
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { LoginDialog } from '@/components/auth/LoginDialog'; // Import the LoginDialog
@@ -82,6 +82,7 @@ export default function DashboardRedesignPage() {
                 imageSrc="https://placehold.co/200x100.png" // Placeholder, ideally an image with document icons
                 imageAlt="Create a Page illustration"
                 imageHint="documents ui interface cards" // Updated hint
+                actionIcon={FilePlus} // Added icon
               />
               <NewActionCard
                 title="Create a Task"
@@ -89,6 +90,7 @@ export default function DashboardRedesignPage() {
                 imageSrc="https://placehold.co/200x100.png"
                 imageAlt="Create a Task illustration"
                 imageHint="task list checkbox"
+                actionIcon={Plus} // Added icon
               />
               <NewActionCard
                 title="Create a Thread"
