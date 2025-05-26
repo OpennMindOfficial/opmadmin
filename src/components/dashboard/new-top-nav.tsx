@@ -23,9 +23,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: '/', label: 'Overview', exact: true },
-  { href: '/tasks', label: 'Tasks', count: 1 },
-  { href: '/activity', label: 'Activity', count: 1 }, // Updated from Threads to Activity
-  { href: '#resources', label: 'Resources', count: 2 },
+  { href: '/tasks', label: 'Tasks', count: 1, exact: true },
+  { href: '/activity', label: 'Activity', count: 1, exact: true },
+  { href: '/functioning', label: 'Functioning', exact: true },
 ];
 
 export function NewTopNav() {
@@ -38,10 +38,7 @@ export function NewTopNav() {
           <div className="flex items-center space-x-2 sm:space-x-4">
             {navItems.map((item) => {
               const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href) && item.href !== '/';
-              const isTasksActive = item.href === '/tasks' && pathname === '/tasks';
-              const isActivityActive = item.href === '/activity' && pathname === '/activity';
-
-
+              
               return (
                 <Button
                   key={item.label}
@@ -49,7 +46,7 @@ export function NewTopNav() {
                   asChild
                   className={cn(
                     "text-sm font-medium px-3 py-2 rounded-md",
-                    (isActive || isTasksActive || isActivityActive) ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    isActive ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   <Link href={item.href}>
@@ -72,6 +69,7 @@ export function NewTopNav() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild><Link href="/about-build">About This App</Link></DropdownMenuItem>
               <DropdownMenuItem>Account Settings</DropdownMenuItem>
               <DropdownMenuItem>Team Settings</DropdownMenuItem>
               <DropdownMenuItem>Logout</DropdownMenuItem>
