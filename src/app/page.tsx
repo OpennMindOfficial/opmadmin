@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
 import { TaskCard } from '@/components/dashboard/task-card';
-import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity, BrainCircuit } from 'lucide-react'; // Renamed PlusCircle to PlusCircleIcon
+import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit } from 'lucide-react'; // Renamed PlusCircle to PlusCircleIcon, Activity to ActivityIconLucide
 import Link from 'next/link';
 import { LoginDialog } from '@/components/auth/LoginDialog';
 
@@ -212,7 +212,7 @@ export default function DashboardRedesignPage() {
                 title="Website Traffic"
                 description="Analyze data on website visits, user flow, and engagement patterns."
                 imageHint="analytics traffic"
-                actionIcon={Activity}
+                actionIcon={ActivityIconLucide}
                 cardVariant="data"
                 primaryActionLabel="Analyze"
                 href="/actions/website-traffic"
@@ -259,9 +259,16 @@ export default function DashboardRedesignPage() {
 
           {/* Latest Activity Section */}
           <section className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <h2 className="text-2xl font-semibold">Latest activity</h2>
-              <ArrowUpRight className="h-5 w-5 text-muted-foreground cursor-pointer" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <h2 className="text-2xl font-semibold">Latest activity</h2>
+                <ArrowUpRight className="h-5 w-5 text-muted-foreground cursor-pointer" />
+              </div>
+              <Button variant="ghost" size="sm" asChild className="text-sm text-muted-foreground hover:text-foreground">
+                <Link href="/activity">
+                  View all
+                </Link>
+              </Button>
             </div>
             <div className="p-6 bg-card rounded-lg shadow-sm">
               <p className="text-muted-foreground">Your latest activity will appear here...</p>
