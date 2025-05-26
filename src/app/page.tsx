@@ -6,15 +6,13 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
-import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, MessageSquare, FilePlus } from 'lucide-react'; // Added FilePlus for "Create a Page"
+import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, MessageSquare, FilePlus } from 'lucide-react'; 
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
-import { LoginDialog } from '@/components/auth/LoginDialog'; // Import the LoginDialog
+import { LoginDialog } from '@/components/auth/LoginDialog'; 
 
 export default function DashboardRedesignPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  // Show login dialog by default if not authenticated.
-  // Set to true to initially show the dialog. Set to false to bypass for development.
   const [showLoginDialog, setShowLoginDialog] = useState(true); 
 
   const handleLoginSuccess = () => {
@@ -22,12 +20,15 @@ export default function DashboardRedesignPage() {
     setShowLoginDialog(false);
   };
 
-  // Effect to ensure dialog is shown if not authenticated and dialog is not already manually closed
   useEffect(() => {
+    // This effect ensures that if for some reason the component re-renders
+    // and the user is not authenticated, the dialog is reshown.
+    // It primarily handles edge cases or programmatic changes to showLoginDialog.
     if (!isAuthenticated && !showLoginDialog) {
-      // This case might happen if showLoginDialog was programmatically set to false
-      // but authentication hasn't happened. We ensure it's shown.
-      // However, typical flow is that showLoginDialog starts true.
+        // To strictly enforce login, if the dialog was closed without authenticating,
+        // and the state somehow reflects that (e.g. dev tools, or complex state change),
+        // we can force it back open. However, the initial state (true) usually handles this.
+        // setShowLoginDialog(true); // Uncomment if you observe issues where dialog doesn't show when it should.
     }
   }, [isAuthenticated, showLoginDialog]);
 
@@ -36,14 +37,25 @@ export default function DashboardRedesignPage() {
     return (
       <LoginDialog 
         isOpen={showLoginDialog} 
-        onOpenChange={setShowLoginDialog} 
+        onOpenChange={(isOpen) => {
+          // If the user closes the dialog (e.g., pressing Esc) without logging in,
+          // and we want to prevent access, we ensure `showLoginDialog` remains true
+          // or we don't change it based on `isOpen` unless it's a successful login.
+          // For now, allowing onOpenChange to set it, but if login is mandatory,
+          // this might need stricter control or rely on `isAuthenticated` solely.
+          if (!isOpen && !isAuthenticated) {
+            // User tried to close dialog without logging in.
+            // Keep dialog mandatory by not setting showLoginDialog to false.
+            // Or, simply let the existing logic handle it (if they close, main content is not rendered).
+          } else {
+            setShowLoginDialog(isOpen);
+          }
+        }} 
         onLoginSuccess={handleLoginSuccess} 
       />
     );
   }
   
-  // If authenticated or login dialog is bypassed (e.g. for dev, if showLoginDialog starts false and isAuthenticated starts true)
-  // show the main dashboard content.
   if (isAuthenticated || !showLoginDialog) { 
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -79,24 +91,18 @@ export default function DashboardRedesignPage() {
               <NewActionCard
                 title="Create a Page"
                 description="Create your first Client to start building your Clients knowledge base."
-                imageSrc="https://placehold.co/200x100.png" // Placeholder, ideally an image with document icons
-                imageAlt="Create a Page illustration"
-                imageHint="documents ui interface cards" // Updated hint
-                actionIcon={FilePlus} // Added icon
+                imageHint="documents ui interface cards" 
+                actionIcon={FilePlus} 
               />
               <NewActionCard
                 title="Create a Task"
                 description="Create your first Case to start building your Cases knowledge base."
-                imageSrc="https://placehold.co/200x100.png"
-                imageAlt="Create a Task illustration"
                 imageHint="task list checkbox"
-                actionIcon={Plus} // Added icon
+                actionIcon={Plus} 
               />
               <NewActionCard
                 title="Create a Thread"
                 description="Create your first Client to start building your Clients knowledge base."
-                imageSrc="https://placehold.co/200x100.png"
-                imageAlt="Create a Thread illustration"
                 imageHint="chat bubbles conversation"
                 actionIcon={MessageSquare} 
               />
@@ -147,17 +153,15 @@ export default function DashboardRedesignPage() {
     );
   }
 
-  // Fallback, in case isAuthenticated is false and showLoginDialog is also false (e.g. dev override)
-  // You might want to render null or a loading spinner, or redirect.
-  // For now, this ensures the LoginDialog is the primary gate if not authenticated.
   return (
      <LoginDialog 
         isOpen={!isAuthenticated} 
         onOpenChange={(isOpen) => {
-          // If the dialog is closed by means other than login (e.g., pressing Esc),
-          // we might want to keep `showLoginDialog` true or handle it based on app logic.
-          // For simplicity, if it's closed, we reflect that. User would need to refresh to see it again
-          // if they didn't log in, unless `showLoginDialog` is controlled more strictly.
+          if (!isOpen && !isAuthenticated) {
+            // Do not change showLoginDialog if user attempts to close without logging in
+            // This ensures the dialog remains modal if authentication is pending.
+            return; 
+          }
           setShowLoginDialog(isOpen); 
         }} 
         onLoginSuccess={handleLoginSuccess} 

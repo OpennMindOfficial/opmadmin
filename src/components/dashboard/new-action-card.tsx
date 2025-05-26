@@ -1,33 +1,54 @@
 
 // src/components/dashboard/new-action-card.tsx
-import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw, type LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface NewActionCardProps {
   title: string;
   description: string;
-  imageSrc: string;
-  imageAlt: string;
   imageHint: string;
-  actionIcon?: LucideIcon; // For the small icon on the "Create a Thread" card image
+  actionIcon?: LucideIcon; 
 }
 
-export function NewActionCard({ title, description, imageSrc, imageAlt, imageHint, actionIcon: ActionIcon }: NewActionCardProps) {
+export function NewActionCard({ title, description, imageHint, actionIcon: ActionIcon }: NewActionCardProps) {
   return (
     <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 rounded-lg overflow-hidden flex flex-col bg-card">
-      <div className="relative h-36 grid-background flex items-center justify-center p-4">
-        <Image 
-          src={imageSrc} 
-          alt={imageAlt} 
-          width={150} // Adjusted size for better fit with grid
-          height={75}  // Adjusted size for better fit with grid
-          className="object-contain"
-          data-ai-hint={imageHint} 
-        />
+      <div className="relative h-36 grid-background flex items-center justify-center p-4 overflow-hidden" data-ai-hint={imageHint}>
+        {/* Decorative fanned-out cards */}
+        <div className="absolute top-3 right-3 flex items-center justify-center">
+          <div 
+            className={cn(
+              "w-16 h-10 rounded border p-1 shadow-sm transform -rotate-12 translate-x-3 translate-y-1 opacity-60",
+              "bg-card/50 border-border/30" 
+            )}
+          >
+            <div className="h-1 w-3/4 bg-muted-foreground/20 mb-1 rounded-sm"></div>
+            <div className="h-1 w-1/2 bg-muted-foreground/20 rounded-sm"></div>
+          </div>
+          <div 
+            className={cn(
+              "w-16 h-10 rounded border p-1 shadow-md transform rotate-6 -translate-x-1 z-10 opacity-75",
+              "bg-card/60 border-border/40"
+            )}
+          >
+            <div className="h-1 w-full bg-muted-foreground/25 mb-1 rounded-sm"></div>
+            <div className="h-1 w-2/3 bg-muted-foreground/25 rounded-sm"></div>
+          </div>
+          <div 
+            className={cn(
+              "w-16 h-10 rounded border p-1 shadow-lg transform -rotate-3 translate-x-1 -translate-y-2 z-20 opacity-90",
+              "bg-card/70 border-border/50"
+            )}
+          >
+            <div className="h-1 w-3/4 bg-muted-foreground/30 mb-1 rounded-sm"></div>
+            <div className="h-1 w-1/2 bg-muted-foreground/30 rounded-sm"></div>
+          </div>
+        </div>
+
         {ActionIcon && (
-          <div className="absolute top-3 right-3 bg-primary/80 p-1.5 rounded-md text-primary-foreground">
+          <div className="absolute top-3 right-3 bg-primary/80 p-1.5 rounded-md text-primary-foreground z-30">
             <ActionIcon size={16} />
           </div>
         )}
