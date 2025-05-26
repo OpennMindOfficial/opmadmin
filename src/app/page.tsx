@@ -6,10 +6,18 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
-import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, NotebookPen, PlusCircle, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity, BrainCircuit } from 'lucide-react';
+import { TaskCard } from '@/components/dashboard/task-card';
+import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity, BrainCircuit } from 'lucide-react'; // Renamed PlusCircle to PlusCircleIcon
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { LoginDialog } from '@/components/auth/LoginDialog';
+
+// Mock data for "Tasks assigned to you" on the homepage
+const homePageTasksData = [
+  { id: 'hpTask1', title: 'Finalize Q3 Report', project: 'Project Alpha', dueDate: 'Oct 28', initialCompleted: false },
+  { id: 'hpTask2', title: 'User Persona Workshop', project: 'Marketing Campaign', dueDate: 'Nov 05', initialCompleted: false },
+  { id: 'hpTask3', title: 'Develop API Endpoint', project: 'Platform Upgrade', dueDate: 'Nov 12', initialCompleted: false },
+];
+
 
 export default function DashboardRedesignPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -87,7 +95,7 @@ export default function DashboardRedesignPage() {
                 title="Add Subject"
                 description="Introduce a new subject area or course to the learning platform."
                 imageHint="subject plus"
-                actionIcon={PlusCircle}
+                actionIcon={PlusCircleIcon}
                 cardVariant="task"
                 primaryActionLabel="Add"
                 href="/actions/add-subject"
@@ -230,40 +238,22 @@ export default function DashboardRedesignPage() {
                 <ChevronDown className="h-5 w-5 text-muted-foreground cursor-pointer" />
               </div>
               <Button variant="ghost" size="sm" asChild className="text-sm text-muted-foreground hover:text-foreground">
-                <Link href="#"> {/* Replace # with the link to the "all tasks" page */}
+                <Link href="/tasks">
                   View all
                 </Link>
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              <Card className="h-40 rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col justify-between">
-                <div>
-                  <h3 className="font-semibold text-md">Finalize Q3 Report</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Project Alpha</p>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Due: Oct 28</span>
-                  {/* Optional: Add a small avatar or status indicator here */}
-                </div>
-              </Card>
-              <Card className="h-40 rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col justify-between">
-                <div>
-                  <h3 className="font-semibold text-md">User Persona Workshop</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Marketing Campaign</p>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Due: Nov 05</span>
-                </div>
-              </Card>
-              <Card className="h-40 rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col justify-between">
-                <div>
-                  <h3 className="font-semibold text-md">Develop API Endpoint</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Platform Upgrade</p>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Due: Nov 12</span>
-                </div>
-              </Card>
+              {homePageTasksData.map(task => (
+                <TaskCard
+                  key={task.id}
+                  id={task.id}
+                  title={task.title}
+                  project={task.project}
+                  dueDate={task.dueDate}
+                  initialCompleted={task.initialCompleted}
+                />
+              ))}
             </div>
           </section>
 
