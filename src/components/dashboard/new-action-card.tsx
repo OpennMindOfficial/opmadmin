@@ -8,146 +8,112 @@ import { cn } from '@/lib/utils';
 interface NewActionCardProps {
   title: string;
   description: string;
-  imageHint: string;
-  actionIcon?: LucideIcon;
+  imageHint: string; // Keep for data-ai-hint on the background div
+  actionIcon: LucideIcon; // Icon to be displayed on the top fanned element
   cardVariant: 'page' | 'task' | 'thread';
 }
 
 export function NewActionCard({ title, description, imageHint, actionIcon: ActionIcon, cardVariant }: NewActionCardProps) {
   
-  const PageVariantVisuals = () => (
+  const FannedElement = ({ className, children }: { className?: string; children: React.ReactNode }) => (
+    <div className={cn("absolute w-[70px] h-[42px] rounded-md border bg-card shadow-sm p-1.5", className)}>
+      {children}
+    </div>
+  );
+
+  const IconOnFannedElement = ({ Icon }: { Icon: LucideIcon }) => (
+    <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-muted-foreground/80 rounded-[4px] flex items-center justify-center shadow">
+      <Icon size={12} className="text-background" />
+    </div>
+  );
+
+  const PageVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
-      {/* Bottom-most page */}
-      <div 
-        className={cn(
-          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-sm transform -rotate-[10deg] translate-x-[2px] translate-y-[10px] opacity-50",
-          "bg-card/40 border-border/30 right-[30px] top-[15px]" 
-        )}
-      >
-        <div className="h-1 w-3/4 bg-muted-foreground/20 mb-1 rounded-sm"></div>
-        <div className="h-1 w-1/2 bg-muted-foreground/20 mb-1 rounded-sm"></div>
-        <div className="h-1 w-5/6 bg-muted-foreground/20 rounded-sm"></div>
-      </div>
-      {/* Middle page */}
-      <div 
-        className={cn(
-          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-md transform rotate-[4deg] -translate-x-[5px] translate-y-[5px] z-10 opacity-70",
-          "bg-card/50 border-border/40 right-[25px] top-[12px]"
-        )}
-      >
-        <div className="h-1 w-full bg-muted-foreground/25 mb-1 rounded-sm"></div>
-        <div className="h-1 w-2/3 bg-muted-foreground/25 rounded-sm"></div>
-      </div>
-      {/* Top-most page */}
-      <div 
-        className={cn(
-          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-lg transform -rotate-[3deg] translate-x-[0px] -translate-y-[0px] z-20 opacity-90",
-          "bg-card/60 border-border/50 right-[20px] top-[10px]" 
-        )}
-      >
-        <div className="h-1.5 w-1/3 bg-primary/20 mb-1 rounded-sm"></div>
-        <div className="h-1 w-3/4 bg-muted-foreground/30 mb-1 rounded-sm"></div>
-        <div className="h-1 w-1/2 bg-muted-foreground/30 rounded-sm"></div>
-      </div>
+      <FannedElement className="transform -rotate-[12deg] translate-x-[5px] translate-y-[12px] opacity-50 z-0 right-[28px] top-[18px]">
+        <div className="h-1 w-3/4 bg-muted-foreground/10 mb-1 rounded-sm"></div>
+        <div className="h-1 w-1/2 bg-muted-foreground/10 rounded-sm"></div>
+      </FannedElement>
+      <FannedElement className="transform rotate-[6deg] -translate-x-[3px] translate-y-[6px] opacity-70 z-10 right-[24px] top-[15px]">
+        <div className="h-1 w-full bg-muted-foreground/15 mb-1 rounded-sm"></div>
+        <div className="h-1 w-2/3 bg-muted-foreground/15 rounded-sm"></div>
+      </FannedElement>
+      <FannedElement className="transform -rotate-[4deg] z-20 right-[20px] top-[12px]">
+        <div className="space-y-1 w-[calc(100%-22px)]">
+            <div className="h-1.5 w-1/3 bg-primary/20 rounded-sm"></div>
+            <div className="h-1 w-3/4 bg-muted-foreground/20 rounded-sm"></div>
+            <div className="h-1 w-1/2 bg-muted-foreground/20 rounded-sm"></div>
+        </div>
+        <IconOnFannedElement Icon={Icon} />
+      </FannedElement>
     </>
   );
 
-  const TaskVariantVisuals = () => (
+  const TaskVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
-       {/* Bottom-most task */}
-      <div 
-        className={cn(
-          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-sm transform rotate-[10deg] -translate-x-[2px] translate-y-[10px] opacity-50",
-           "bg-card/40 border-border/30 right-[30px] top-[15px]" 
-        )}
-      >
+      <FannedElement className="transform rotate-[12deg] -translate-x-[5px] translate-y-[12px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="flex items-center mb-1">
-          <div className="h-2.5 w-2.5 border border-muted-foreground/30 rounded-sm mr-1.5"></div>
-          <div className="h-1 w-3/4 bg-muted-foreground/20 rounded-sm"></div>
+          <div className="h-2 w-2 border border-muted-foreground/20 rounded-sm mr-1"></div>
+          <div className="h-1 w-3/4 bg-muted-foreground/10 rounded-sm"></div>
         </div>
         <div className="flex items-center">
-          <div className="h-2.5 w-2.5 border border-muted-foreground/30 rounded-sm mr-1.5"></div>
-          <div className="h-1 w-1/2 bg-muted-foreground/20 rounded-sm"></div>
+          <div className="h-2 w-2 border border-muted-foreground/20 rounded-sm mr-1"></div>
+          <div className="h-1 w-1/2 bg-muted-foreground/10 rounded-sm"></div>
         </div>
-      </div>
-      {/* Middle task */}
-      <div 
-        className={cn(
-          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-md transform -rotate-[5deg] translate-x-[5px] translate-y-[5px] z-10 opacity-70",
-          "bg-card/50 border-border/40 right-[25px] top-[12px]"
-        )}
-      >
+      </FannedElement>
+      <FannedElement className="transform -rotate-[7deg] translate-x-[3px] translate-y-[6px] opacity-70 z-10 right-[24px] top-[15px]">
         <div className="flex items-center mb-1">
-          <div className="h-2.5 w-2.5 border border-primary/40 rounded-sm mr-1.5 bg-primary/10"></div>
-          <div className="h-1 w-full bg-muted-foreground/25 rounded-sm"></div>
+          <div className="h-2 w-2 border border-muted-foreground/30 rounded-sm mr-1 bg-muted-foreground/5"></div>
+          <div className="h-1 w-full bg-muted-foreground/15 rounded-sm"></div>
         </div>
          <div className="flex items-center">
-          <div className="h-2.5 w-2.5 border border-muted-foreground/40 rounded-sm mr-1.5"></div>
-          <div className="h-1 w-2/3 bg-muted-foreground/25 rounded-sm"></div>
+          <div className="h-2 w-2 border border-muted-foreground/30 rounded-sm mr-1"></div>
+          <div className="h-1 w-2/3 bg-muted-foreground/15 rounded-sm"></div>
         </div>
-      </div>
-      {/* Top-most task */}
-      <div 
-        className={cn(
-          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-lg transform rotate-[2deg] -translate-x-[0px] -translate-y-[0px] z-20 opacity-90",
-          "bg-card/60 border-border/50 right-[20px] top-[10px]"
-        )}
-      >
-        <div className="flex items-center mb-1">
-           <div className="h-2.5 w-2.5 border border-primary/50 rounded-sm mr-1.5 bg-primary/20 flex items-center justify-center">
-            <div className="h-1 w-1 bg-primary/60 rounded-sm"></div> {/* Checkmark-like */}
-          </div>
-          <div className="h-1 w-3/4 bg-muted-foreground/30 rounded-sm line-through"></div>
+      </FannedElement>
+      <FannedElement className="transform rotate-[3deg] z-20 right-[20px] top-[12px]">
+        <div className="space-y-1 w-[calc(100%-22px)]">
+            <div className="flex items-center">
+                <div className="h-2.5 w-2.5 border border-primary/40 rounded-sm mr-1.5 bg-primary/10 flex items-center justify-center">
+                    <div className="h-1 w-1 bg-primary/50 rounded-sm"></div>
+                </div>
+                <div className="h-1 w-3/4 bg-muted-foreground/20 rounded-sm line-through"></div>
+            </div>
+            <div className="flex items-center">
+                <div className="h-2.5 w-2.5 border border-muted-foreground/40 rounded-sm mr-1.5"></div>
+                <div className="h-1 w-1/2 bg-muted-foreground/20 rounded-sm"></div>
+            </div>
         </div>
-        <div className="flex items-center">
-          <div className="h-2.5 w-2.5 border border-muted-foreground/50 rounded-sm mr-1.5"></div>
-          <div className="h-1 w-1/2 bg-muted-foreground/30 rounded-sm"></div>
-        </div>
-      </div>
+        <IconOnFannedElement Icon={Icon} />
+      </FannedElement>
     </>
   );
 
-  const ThreadVariantVisuals = () => (
+  const ThreadVariantVisuals = ({ Icon }: { Icon: LucideIcon }) => (
     <>
-      {/* Bottom-most thread card */}
-      <div 
-        className={cn(
-          "absolute w-[72px] h-[40px] rounded-md border p-1.5 shadow-sm transform -rotate-[10deg] translate-x-[2px] translate-y-[8px] opacity-50",
-          "bg-card/40 border-border/30 right-[30px] top-[15px]"
-        )}
-      >
+      <FannedElement className="transform -rotate-[12deg] translate-x-[5px] translate-y-[10px] opacity-50 z-0 right-[28px] top-[18px]">
         <div className="flex items-center mb-1">
-          <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/20 mr-1.5"></div>
-          <div className="h-1 w-3/5 bg-muted-foreground/20 rounded-sm"></div>
+          <div className="h-2 w-2 rounded-full bg-muted-foreground/10 mr-1"></div>
+          <div className="h-1 w-3/5 bg-muted-foreground/10 rounded-sm"></div>
         </div>
-        <div className="h-1 w-4/5 bg-muted-foreground/20 ml-[15px] rounded-sm"></div>
-      </div>
-       {/* Middle thread card */}
-      <div 
-        className={cn(
-          "absolute w-[72px] h-[40px] rounded-md border p-1.5 shadow-md transform rotate-[4deg] -translate-x-[5px] translate-y-[4px] z-10 opacity-70",
-          "bg-card/50 border-border/40 right-[25px] top-[12px]"
-        )}
-      >
+        <div className="h-1 w-4/5 bg-muted-foreground/10 ml-[12px] rounded-sm"></div>
+      </FannedElement>
+       <FannedElement className="transform rotate-[8deg] -translate-x-[3px] translate-y-[5px] opacity-70 z-10 right-[24px] top-[15px]">
         <div className="flex items-center mb-1">
-          <div className="h-2.5 w-2.5 rounded-full bg-accent/60 mr-1.5"></div>
-          <div className="h-1 w-1/2 bg-muted-foreground/25 rounded-sm"></div>
+          <div className="h-2 w-2 rounded-full bg-muted-foreground/20 mr-1"></div>
+          <div className="h-1 w-1/2 bg-muted-foreground/15 rounded-sm"></div>
         </div>
-        <div className="h-1 w-3/5 bg-muted-foreground/25 ml-[15px] rounded-sm"></div>
-      </div>
-      {/* Top-most thread card */}
-      <div 
-        className={cn(
-          "absolute w-[72px] h-[40px] rounded-lg border p-1.5 shadow-lg transform -rotate-[3deg] translate-x-[0px] -translate-y-[0px] z-20 opacity-90",
-          "bg-card/60 border-border/50 right-[20px] top-[10px]"
-        )}
-      >
-        <div className="flex items-center mb-1">
-          <div className="h-2.5 w-2.5 rounded-full bg-primary/30 mr-1.5"></div>
-          <div className="h-1 w-3/5 bg-muted-foreground/30 rounded-sm"></div>
+        <div className="h-1 w-3/5 bg-muted-foreground/15 ml-[12px] rounded-sm"></div>
+      </FannedElement>
+      <FannedElement className="transform -rotate-[2deg] z-20 right-[20px] top-[12px]">
+         <div className="space-y-1 w-[calc(100%-22px)]">
+            <div className="flex items-center">
+                <div className="h-2.5 w-2.5 rounded-full bg-primary/20 mr-1.5"></div>
+                <div className="h-1 w-3/5 bg-muted-foreground/20 rounded-sm"></div>
+            </div>
+            <div className="h-1 w-1/2 bg-muted-foreground/20 ml-[15px] rounded-sm"></div>
         </div>
-        <div className="h-1 w-1/2 bg-muted-foreground/30 ml-[15px] rounded-sm"></div>
-      </div>
+        <IconOnFannedElement Icon={Icon} />
+      </FannedElement>
     </>
   );
 
@@ -155,15 +121,10 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
     <Card className="shadow-md hover:shadow-lg transition-shadow duration-200 rounded-lg overflow-hidden flex flex-col bg-card">
       <div className="relative h-36 grid-background flex items-center justify-center p-4 overflow-hidden" data-ai-hint={imageHint}>
         
-        {cardVariant === 'page' && <PageVariantVisuals />}
-        {cardVariant === 'task' && <TaskVariantVisuals />}
-        {cardVariant === 'thread' && <ThreadVariantVisuals />}
+        {cardVariant === 'page' && <PageVariantVisuals Icon={ActionIcon} />}
+        {cardVariant === 'task' && <TaskVariantVisuals Icon={ActionIcon} />}
+        {cardVariant === 'thread' && <ThreadVariantVisuals Icon={ActionIcon} />}
 
-        {ActionIcon && (
-          <div className="absolute top-3 right-3 bg-primary/80 p-1.5 rounded-md text-primary-foreground z-30 shadow-lg">
-            <ActionIcon size={16} />
-          </div>
-        )}
       </div>
       <CardHeader className="pb-2 pt-4">
         <CardTitle className="text-xl font-semibold">{title}</CardTitle>
