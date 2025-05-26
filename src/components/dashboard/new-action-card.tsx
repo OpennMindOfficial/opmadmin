@@ -17,34 +17,35 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
   
   const PageVariantVisuals = () => (
     <>
-      {/* Fanned documents for "Create a Page" */}
+      {/* Bottom-most page */}
       <div 
         className={cn(
-          "absolute w-20 h-12 rounded border p-1.5 shadow-sm transform -rotate-12 translate-x-1 translate-y-2 opacity-60",
-          "bg-card/50 border-border/30 right-8 top-5" 
+          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-sm transform -rotate-[10deg] translate-x-[2px] translate-y-[10px] opacity-50",
+          "bg-card/40 border-border/30 right-[30px] top-[15px]" 
         )}
       >
         <div className="h-1 w-3/4 bg-muted-foreground/20 mb-1 rounded-sm"></div>
         <div className="h-1 w-1/2 bg-muted-foreground/20 mb-1 rounded-sm"></div>
         <div className="h-1 w-5/6 bg-muted-foreground/20 rounded-sm"></div>
       </div>
+      {/* Middle page */}
       <div 
         className={cn(
-          "absolute w-20 h-12 rounded border p-1.5 shadow-md transform rotate-6 -translate-x-2 translate-y-1 z-10 opacity-75",
-          "bg-card/60 border-border/40 right-6 top-4"
+          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-md transform rotate-[4deg] -translate-x-[5px] translate-y-[5px] z-10 opacity-70",
+          "bg-card/50 border-border/40 right-[25px] top-[12px]"
         )}
       >
-        <div className="h-1.5 w-1/3 bg-accent/50 mb-1 rounded-sm"></div>
         <div className="h-1 w-full bg-muted-foreground/25 mb-1 rounded-sm"></div>
         <div className="h-1 w-2/3 bg-muted-foreground/25 rounded-sm"></div>
       </div>
+      {/* Top-most page */}
       <div 
         className={cn(
-          "absolute w-20 h-12 rounded border p-1.5 shadow-lg transform -rotate-3 translate-x-2 -translate-y-1 z-20 opacity-90",
-          "bg-card/70 border-border/50 right-4 top-3" 
+          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-lg transform -rotate-[3deg] translate-x-[0px] -translate-y-[0px] z-20 opacity-90",
+          "bg-card/60 border-border/50 right-[20px] top-[10px]" 
         )}
       >
-        <div className="h-1.5 w-1/4 bg-primary/30 mb-1 rounded-sm"></div>
+        <div className="h-1.5 w-1/3 bg-primary/20 mb-1 rounded-sm"></div>
         <div className="h-1 w-3/4 bg-muted-foreground/30 mb-1 rounded-sm"></div>
         <div className="h-1 w-1/2 bg-muted-foreground/30 rounded-sm"></div>
       </div>
@@ -53,52 +54,54 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
 
   const TaskVariantVisuals = () => (
     <>
-      {/* Fanned checklist items for "Create a Task" */}
-       <div 
+       {/* Bottom-most task */}
+      <div 
         className={cn(
-          "absolute w-20 h-12 rounded border p-1.5 shadow-sm transform rotate-12 -translate-x-1 translate-y-2 opacity-60",
-          "bg-card/50 border-border/30 right-8 top-5" 
+          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-sm transform rotate-[10deg] -translate-x-[2px] translate-y-[10px] opacity-50",
+           "bg-card/40 border-border/30 right-[30px] top-[15px]" 
         )}
       >
         <div className="flex items-center mb-1">
-          <div className="h-3 w-3 border border-muted-foreground/30 rounded-sm mr-1.5"></div>
+          <div className="h-2.5 w-2.5 border border-muted-foreground/30 rounded-sm mr-1.5"></div>
           <div className="h-1 w-3/4 bg-muted-foreground/20 rounded-sm"></div>
         </div>
         <div className="flex items-center">
-          <div className="h-3 w-3 border border-muted-foreground/30 rounded-sm mr-1.5"></div>
+          <div className="h-2.5 w-2.5 border border-muted-foreground/30 rounded-sm mr-1.5"></div>
           <div className="h-1 w-1/2 bg-muted-foreground/20 rounded-sm"></div>
         </div>
       </div>
+      {/* Middle task */}
       <div 
         className={cn(
-          "absolute w-20 h-12 rounded border p-1.5 shadow-md transform -rotate-6 translate-x-2 translate-y-1 z-10 opacity-75",
-          "bg-card/60 border-border/40 right-6 top-4"
+          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-md transform -rotate-[5deg] translate-x-[5px] translate-y-[5px] z-10 opacity-70",
+          "bg-card/50 border-border/40 right-[25px] top-[12px]"
         )}
       >
         <div className="flex items-center mb-1">
-          <div className="h-3 w-3 border-2 border-primary/40 rounded-sm mr-1.5 bg-primary/20"></div>
+          <div className="h-2.5 w-2.5 border border-primary/40 rounded-sm mr-1.5 bg-primary/10"></div>
           <div className="h-1 w-full bg-muted-foreground/25 rounded-sm"></div>
         </div>
          <div className="flex items-center">
-          <div className="h-3 w-3 border border-muted-foreground/40 rounded-sm mr-1.5"></div>
+          <div className="h-2.5 w-2.5 border border-muted-foreground/40 rounded-sm mr-1.5"></div>
           <div className="h-1 w-2/3 bg-muted-foreground/25 rounded-sm"></div>
         </div>
       </div>
+      {/* Top-most task */}
       <div 
         className={cn(
-          "absolute w-20 h-12 rounded border p-1.5 shadow-lg transform rotate-3 -translate-x-2 -translate-y-1 z-20 opacity-90",
-          "bg-card/70 border-border/50 right-4 top-3"
+          "absolute w-[72px] h-[44px] rounded border p-1.5 shadow-lg transform rotate-[2deg] -translate-x-[0px] -translate-y-[0px] z-20 opacity-90",
+          "bg-card/60 border-border/50 right-[20px] top-[10px]"
         )}
       >
         <div className="flex items-center mb-1">
-          <div className="h-3 w-3 border border-muted-foreground/50 rounded-sm mr-1.5"></div>
-          <div className="h-1 w-3/4 bg-muted-foreground/30 rounded-sm"></div>
+           <div className="h-2.5 w-2.5 border border-primary/50 rounded-sm mr-1.5 bg-primary/20 flex items-center justify-center">
+            <div className="h-1 w-1 bg-primary/60 rounded-sm"></div> {/* Checkmark-like */}
+          </div>
+          <div className="h-1 w-3/4 bg-muted-foreground/30 rounded-sm line-through"></div>
         </div>
         <div className="flex items-center">
-           <div className="h-3 w-3 border-2 border-primary/50 rounded-sm mr-1.5 bg-primary/30 flex items-center justify-center">
-            <div className="h-1.5 w-1.5 bg-primary/70 rounded-sm"></div> {/* Checkmark-like */}
-          </div>
-          <div className="h-1 w-1/2 bg-muted-foreground/30 rounded-sm line-through"></div>
+          <div className="h-2.5 w-2.5 border border-muted-foreground/50 rounded-sm mr-1.5"></div>
+          <div className="h-1 w-1/2 bg-muted-foreground/30 rounded-sm"></div>
         </div>
       </div>
     </>
@@ -106,44 +109,44 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
 
   const ThreadVariantVisuals = () => (
     <>
-      {/* Fanned chat/message items for "Create a Thread" */}
+      {/* Bottom-most thread card */}
       <div 
         className={cn(
-          "absolute w-20 h-10 rounded-md border p-1.5 shadow-sm transform -rotate-12 translate-x-1 translate-y-2 opacity-60",
-          "bg-card/50 border-border/30 right-8 top-5" 
+          "absolute w-[72px] h-[40px] rounded-md border p-1.5 shadow-sm transform -rotate-[10deg] translate-x-[2px] translate-y-[8px] opacity-50",
+          "bg-card/40 border-border/30 right-[30px] top-[15px]"
         )}
       >
         <div className="flex items-center mb-1">
-          <div className="h-3 w-3 rounded-full bg-muted-foreground/20 mr-1"></div>
+          <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/20 mr-1.5"></div>
           <div className="h-1 w-3/5 bg-muted-foreground/20 rounded-sm"></div>
         </div>
-        <div className="h-1 w-4/5 bg-muted-foreground/20 ml-4 rounded-sm"></div>
+        <div className="h-1 w-4/5 bg-muted-foreground/20 ml-[15px] rounded-sm"></div>
       </div>
+       {/* Middle thread card */}
       <div 
         className={cn(
-          "absolute w-20 h-10 rounded-md border p-1.5 shadow-md transform rotate-6 -translate-x-2 translate-y-1 z-10 opacity-75",
-          "bg-card/60 border-border/40 right-6 top-4"
+          "absolute w-[72px] h-[40px] rounded-md border p-1.5 shadow-md transform rotate-[4deg] -translate-x-[5px] translate-y-[4px] z-10 opacity-70",
+          "bg-card/50 border-border/40 right-[25px] top-[12px]"
         )}
       >
         <div className="flex items-center mb-1">
-          <div className="h-3 w-3 rounded-full bg-accent/50 mr-1"></div>
+          <div className="h-2.5 w-2.5 rounded-full bg-accent/60 mr-1.5"></div>
           <div className="h-1 w-1/2 bg-muted-foreground/25 rounded-sm"></div>
-           <div className="h-2 w-2 bg-primary/30 rounded-full ml-auto"></div>
         </div>
-        <div className="h-1 w-3/5 bg-muted-foreground/25 ml-4 rounded-sm"></div>
+        <div className="h-1 w-3/5 bg-muted-foreground/25 ml-[15px] rounded-sm"></div>
       </div>
+      {/* Top-most thread card */}
       <div 
         className={cn(
-          "absolute w-20 h-10 rounded-lg border p-1.5 shadow-lg transform -rotate-3 translate-x-2 -translate-y-1 z-20 opacity-90",
-          "bg-card/70 border-border/50 right-4 top-3"
+          "absolute w-[72px] h-[40px] rounded-lg border p-1.5 shadow-lg transform -rotate-[3deg] translate-x-[0px] -translate-y-[0px] z-20 opacity-90",
+          "bg-card/60 border-border/50 right-[20px] top-[10px]"
         )}
       >
         <div className="flex items-center mb-1">
-          <div className="h-3 w-3 rounded-full bg-primary/30 mr-1"></div>
+          <div className="h-2.5 w-2.5 rounded-full bg-primary/30 mr-1.5"></div>
           <div className="h-1 w-3/5 bg-muted-foreground/30 rounded-sm"></div>
-          <div className="h-2 w-3 bg-green-500/30 rounded-sm ml-auto text-[0.5rem] flex items-center justify-center text-green-800/70">✓</div>
         </div>
-        <div className="h-1 w-1/2 bg-muted-foreground/30 ml-4 rounded-sm"></div>
+        <div className="h-1 w-1/2 bg-muted-foreground/30 ml-[15px] rounded-sm"></div>
       </div>
     </>
   );
@@ -172,7 +175,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
         <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground">
           <Plus className="mr-2 h-4 w-4" /> Create
         </Button>
-        <Button variant="outline" className="w-full sm:w-auto text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" className="w-full sm:w-auto text-muted-foreground hover:text-foreground">
           <RefreshCw className="mr-2 h-3 w-3" /> Generate example
         </Button>
       </CardFooter>
