@@ -104,7 +104,6 @@ export async function editSubjectNoteAction(
   console.log('Received newData for edit (from client form):', JSON.stringify(newData, null, 2));
 
   try {
-    // Ensure all fields are explicitly mapped to the payload with correct casing for Baserow
     const payloadForBaserow = {
       Subject: newData.subject,
       Chapter: newData.chapter,
@@ -126,25 +125,23 @@ export async function editSubjectNoteAction(
         return { success: false, error: 'Baserow update response was invalid. Data might not have been saved.' };
     }
     
-    // **STRICTER SUCCESS CHECK:**
-    // Verify that the data returned by Baserow matches exactly what we tried to send.
-    const dataTrulyChangedAndVerified = 
+    // Check if the data returned matches what we tried to send (less strict, just for logging)
+    const dataMatched = 
         updatedNoteFromService.Subject === payloadForBaserow.Subject &&
         updatedNoteFromService.Chapter === payloadForBaserow.Chapter &&
         updatedNoteFromService.Notes === payloadForBaserow.Notes;
 
-    if (!dataTrulyChangedAndVerified) {
-        console.warn(`CRITICAL: Baserow update discrepancy for note ${noteId}.`);
+    if (!dataMatched) {
+        console.warn(`POTENTIAL DATA MISMATCH: Baserow update for note ${noteId} returned data that does not exactly match the sent payload. This is a warning.`);
         console.warn(`Sent Payload: ${JSON.stringify(payloadForBaserow)}`);
         console.warn(`Received Data: ${JSON.stringify(updatedNoteFromService)}`);
-        console.warn(`This means Baserow likely returned a 200 OK but did NOT update the data as expected or returned stale data.`);
-        // This is now a hard failure to prevent misleading success toasts.
-        return { success: false, error: 'Update to Baserow did not return the expected data. The note may not have been updated correctly.' };
+        // We are proceeding as if successful for the UI, but this indicates a potential issue.
     }
 
     revalidatePath('/actions/create-subject-notes');
-    console.log(`editSubjectNoteAction successful and VERIFIED for noteId ${noteId}. Path /actions/create-subject-notes revalidated.`);
+    console.log(`editSubjectNoteAction successful for noteId ${noteId}. Path /actions/create-subject-notes revalidated.`);
     console.log('--- Ending editSubjectNoteAction (Success) ---');
+    // Return the note data received from Baserow, even if it didn't match perfectly (as per user request to reduce strictness)
     return { success: true, note: updatedNoteFromService };
 
   } catch (error: any) {
