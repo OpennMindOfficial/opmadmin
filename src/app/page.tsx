@@ -26,64 +26,100 @@ export default function DashboardRedesignPage() {
   const [showLoginDialog, setShowLoginDialog] = useState(true); 
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [currentUserEmailForPasswordChange, setCurrentUserEmailForPasswordChange] = useState('');
+  const [currentUserFullName, setCurrentUserFullName] = useState('');
+  const [greeting, setGreeting] = useState('Morning');
+  const [userFirstName, setUserFirstName] = useState('');
 
 
   useEffect(() => {
-    // Check for persisted login on mount
     const storedEmail = localStorage.getItem('currentUserEmail');
+    const storedFullName = localStorage.getItem('currentUserFullName');
+
     if (storedEmail) {
       setIsAuthenticated(true);
       setShowLoginDialog(false);
-      updateUserLastActive(storedEmail).catch(err => 
-        console.error("Failed to update last active time on revisit:", err)
-      );
+      setCurrentUserFullName(storedFullName || '');
+      updateUserLastActive(storedEmail)
+        .then(res => {
+          if (res.success && res.userName) {
+            setCurrentUserFullName(res.userName);
+            localStorage.setItem('currentUserFullName', res.userName); // Keep localStorage updated
+          }
+        })
+        .catch(err => console.error("Failed to update last active time on revisit:", err));
     } else {
-      // No persisted email, ensure login dialog is shown if not authenticated
-      // and not already in password change flow
       if (!isAuthenticated && !showChangePasswordDialog) {
         setShowLoginDialog(true);
       }
     }
-  }, []); // Run only on mount
+  }, []);
 
 
   useEffect(() => {
-    // This effect ensures that if the app is in a state where the user is not authenticated,
-    // and the change password dialog is not active, then the login dialog should be shown.
-    // This also handles the case where localStorage might have been cleared manually.
     if (!isAuthenticated && !showChangePasswordDialog && !localStorage.getItem('currentUserEmail')) {
       setShowLoginDialog(true);
     } else if (isAuthenticated || localStorage.getItem('currentUserEmail')) {
-      // If authenticated or email stored, ensure login dialog is not shown.
       setShowLoginDialog(false);
     }
   }, [isAuthenticated, showChangePasswordDialog]);
 
+  useEffect(() => {
+    const currentHour = new Date().getHours();
+    if (currentHour < 12) {
+      setGreeting('Good morning');
+    } else if (currentHour < 18) {
+      setGreeting('Good afternoon');
+    } else {
+      setGreeting('Good evening');
+    }
 
-  const handleLoginSuccess = (email: string) => {
+    if (currentUserFullName) {
+      setUserFirstName(currentUserFullName.split(' ')[0]);
+    } else {
+        // Attempt to get from localStorage again if state isn't set yet (e.g. on fast refresh)
+        const storedName = localStorage.getItem('currentUserFullName');
+        if (storedName) {
+            setCurrentUserFullName(storedName);
+            setUserFirstName(storedName.split(' ')[0]);
+        } else {
+            setUserFirstName(''); // Or a default like 'Team'
+        }
+    }
+  }, [currentUserFullName, isAuthenticated]);
+
+
+  const handleLoginSuccess = (email: string, userName: string) => {
     setIsAuthenticated(true);
     setShowLoginDialog(false); 
-    // Email is stored in localStorage by LoginDialog itself
+    setCurrentUserFullName(userName);
+    localStorage.setItem('currentUserEmail', email);
+    localStorage.setItem('currentUserFullName', userName);
   };
 
-  const handleFirstTimeLogin = (email: string) => {
+  const handleFirstTimeLogin = (email: string, userName: string) => {
     setCurrentUserEmailForPasswordChange(email);
+    setCurrentUserFullName(userName); // Store full name for the change password dialog
     setShowLoginDialog(false); 
     setShowChangePasswordDialog(true);
   };
 
-  const handlePasswordChangedSuccess = (email: string) => {
+  const handlePasswordChangedSuccess = (email: string, userName: string) => {
     setIsAuthenticated(true); 
     setShowChangePasswordDialog(false);
-    // Email is stored in localStorage by ChangePasswordDialog itself
+    setCurrentUserFullName(userName);
+    localStorage.setItem('currentUserEmail', email);
+    localStorage.setItem('currentUserFullName', userName);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('currentUserEmail');
+    localStorage.removeItem('currentUserFullName');
     setIsAuthenticated(false);
     setShowLoginDialog(true);
     setShowChangePasswordDialog(false);
     setCurrentUserEmailForPasswordChange('');
+    setCurrentUserFullName('');
+    setUserFirstName('');
   };
 
 
@@ -99,6 +135,7 @@ export default function DashboardRedesignPage() {
         }}
         onPasswordChangedSuccess={handlePasswordChangedSuccess}
         userEmail={currentUserEmailForPasswordChange}
+        userName={currentUserFullName} // Pass full name
       />
     );
   }
@@ -119,7 +156,6 @@ export default function DashboardRedesignPage() {
     );
   }
 
-  // Only render dashboard if authenticated
   if (isAuthenticated) {
     return ( 
       <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -128,9 +164,11 @@ export default function DashboardRedesignPage() {
           {/* Header Section */}
           <section className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold tracking-tight">Morning Team!</h1>
+              <h1 className="text-4xl font-bold tracking-tight">
+                {greeting}, {userFirstName || 'User'}!
+              </h1>
               <p className="text-lg text-muted-foreground">
-                Collaborate with your team and organize your work here!
+                Fuel your day with an OpennMind. Let's organize and achieve!
               </p>
             </div>
             <div className="w-full md:w-1/3 lg:w-1/4 xl:w-1/5">
@@ -350,10 +388,6 @@ export default function DashboardRedesignPage() {
     );
   }
 
-  // Fallback, should ideally not be reached if logic is correct,
-  // but good for ensuring something renders if state is unexpected.
-  // Or, if still initializing, show a loading spinner.
-  // For now, if not authenticated and dialogs are not showing, it means we are waiting for localStorage check.
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
        {/* Optional: Add a loading spinner here if desired while checking localStorage */}

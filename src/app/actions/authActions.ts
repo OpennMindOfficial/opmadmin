@@ -10,6 +10,7 @@ interface LoginResult {
   error?: string;
   firstTimeLogin?: boolean;
   userEmail?: string; // Pass email for password change context
+  userName?: string; // Pass user's full name
 }
 
 export async function verifyLogin(email: string, plainPassword_providedByUser: string): Promise<LoginResult> {
@@ -33,15 +34,16 @@ export async function verifyLogin(email: string, plainPassword_providedByUser: s
 
     const isFirstTime = user['First time'] === 'YES';
     const nowISO = new Date().toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
+    const userName = user.Name || ''; // Get user's name
 
     if (!isFirstTime) {
       // Update 'Last active' for returning user
       await updateUser(user.id, { 'Last active': nowISO });
-      return { success: true, firstTimeLogin: false, userEmail: user.Email }; // Pass email for localStorage
+      return { success: true, firstTimeLogin: false, userEmail: user.Email, userName }; // Pass email and name
     } else {
       // It's a first-time login, don't update 'Last active' yet.
       // 'First signin' will be updated after password change.
-      return { success: true, firstTimeLogin: true, userEmail: user.Email };
+      return { success: true, firstTimeLogin: true, userEmail: user.Email, userName };
     }
   } catch (error: any) {
     console.error('Login verification error:', error);
@@ -82,12 +84,10 @@ export async function changePassword(email: string, newPassword_plaintext: strin
   }
 }
 
-export async function updateUserLastActive(email: string): Promise<{ success: boolean; error?: string }> {
+export async function updateUserLastActive(email: string): Promise<{ success: boolean; error?: string, userName?: string }> {
   try {
     const user = await getUserByEmail(email);
     if (!user) {
-      // Don't treat 'user not found' as a critical error for this specific action,
-      // as localStorage might hold an outdated email. Silently fail or log.
       console.warn(`updateUserLastActive: User not found for email ${email}.`);
       return { success: false, error: 'User not found for last active update.' };
     }
@@ -98,7 +98,7 @@ export async function updateUserLastActive(email: string): Promise<{ success: bo
     if (!updated) {
       return { success: false, error: 'Failed to update last active time.' };
     }
-    return { success: true };
+    return { success: true, userName: user.Name || '' };
   } catch (error: any) {
     console.error(`Error updating last active time for ${email}:`, error);
     return { success: false, error: 'An unexpected error occurred while updating last active time.' };

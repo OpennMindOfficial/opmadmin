@@ -21,15 +21,17 @@ import { RefreshCw } from 'lucide-react';
 interface ChangePasswordDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onPasswordChangedSuccess: (email: string) => void; // Pass email up
+  onPasswordChangedSuccess: (email: string, userName: string) => void; // Pass email and name up
   userEmail: string;
+  userName: string; // Receive user's full name
 }
 
 export function ChangePasswordDialog({ 
   isOpen, 
   onOpenChange, 
   onPasswordChangedSuccess,
-  userEmail 
+  userEmail,
+  userName
 }: ChangePasswordDialogProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -65,8 +67,9 @@ export function ChangePasswordDialog({
           description: "Your password has been successfully updated.",
           variant: "default", 
         });
-        localStorage.setItem('currentUserEmail', userEmail); // Store email for persistence
-        onPasswordChangedSuccess(userEmail);
+        localStorage.setItem('currentUserEmail', userEmail); 
+        localStorage.setItem('currentUserFullName', userName);
+        onPasswordChangedSuccess(userEmail, userName);
         onOpenChange(false); 
       } else {
         setError(result.error || 'Failed to change password.');

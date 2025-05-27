@@ -19,8 +19,8 @@ import { verifyLogin } from '@/app/actions/authActions';
 interface LoginDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onLoginSuccess: (email: string) => void; // Pass email up
-  onFirstTimeLogin: (email: string) => void;
+  onLoginSuccess: (email: string, userName: string) => void; // Pass email and name up
+  onFirstTimeLogin: (email: string, userName: string) => void; // Pass email and name up
 }
 
 const generateCaptcha = (length: number = 6): string => {
@@ -82,14 +82,15 @@ export function LoginDialog({
     setIsLoading(true);
     try {
       const result = await verifyLogin(email, password);
-      if (result.success && result.userEmail) {
+      if (result.success && result.userEmail && result.userName !== undefined) {
         if (result.firstTimeLogin) {
           onOpenChange(false); 
-          onFirstTimeLogin(result.userEmail); 
+          onFirstTimeLogin(result.userEmail, result.userName); 
         } else {
-          localStorage.setItem('currentUserEmail', result.userEmail); // Store email for persistence
+          localStorage.setItem('currentUserEmail', result.userEmail);
+          localStorage.setItem('currentUserFullName', result.userName); 
           onOpenChange(false); 
-          onLoginSuccess(result.userEmail); 
+          onLoginSuccess(result.userEmail, result.userName); 
         }
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');
