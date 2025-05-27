@@ -4,23 +4,23 @@
 
 const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
-const BASEROW_TEAM_TABLE_ID = '552726'; // Updated to new user table ID
+const BASEROW_TEAM_TABLE_ID = '552726'; 
 const BASEROW_CEO_TABLE_ID = '552544';
-const BASEROW_SUBJECT_NOTES_TABLE_ID = '551357';
+const BASEROW_SUBJECT_NOTES_TABLE_ID = '552726'; // <<< UPDATED TABLE ID HERE
 
 export interface UserRecord {
-  id: number; // Baserow's internal row ID
+  id: number; 
   order: string;
-  Name?: string; // Full Name
+  Name?: string; 
   Email: string;
   Password?: string; 
   'First signin'?: string; 
   'Last active'?: string; 
   'First time'?: 'YES' | 'NO';
   Role?: string; 
-  DOB?: string; // Date of Birth as string (YYYY-MM-DD)
-  Class?: string; // e.g., "Class 10"
-  AuthMethod?: string; // e.g., 'email', 'firebasegoogle'
+  DOB?: string; 
+  Class?: string; 
+  AuthMethod?: string; 
   [key: string]: any; 
 }
 
@@ -35,7 +35,7 @@ export interface CeoUserRecord {
 }
 
 export interface SubjectNoteRecord {
-  id: number; // System ID
+  id: number; 
   order: string;
   Subject?: string;
   Chapter?: string;
@@ -61,33 +61,36 @@ async function makeBaserowRequest(
     cache: 'no-store', 
   };
 
-  if (body) {
+  if (body && (method === 'POST' || method === 'PATCH')) {
     options.body = JSON.stringify(body);
   }
 
-  console.log(`Baserow Request: ${method} ${url}`, body && method !== 'GET' ? `Body: ${JSON.stringify(body)}` : '(No Body or GET request)');
+  console.log(`Baserow Request: ${method} ${url}`, body && (method === 'POST' || method === 'PATCH') ? `Body: ${JSON.stringify(body)}` : '(No Body or GET/DELETE request)');
 
   try {
     const response = await fetch(url, options);
     
+    // Log status and statusText for all responses
+    console.log(`Baserow Response Status for ${method} ${url}: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to parse error JSON from Baserow.' }));
+      const errorData = await response.json().catch(() => ({ detail: `Failed to parse error JSON from Baserow. Status: ${response.status}` }));
       console.error('Baserow API Error:', { status: response.status, statusText: response.statusText, errorData, url, method, requestBody: body ? JSON.stringify(body) : 'No Body' });
       throw new Error(errorData.detail || `Baserow API request failed: ${response.status} ${response.statusText}`);
     }
 
-    if (method === 'DELETE' || response.status === 204) {
+    if (method === 'DELETE' || response.status === 204) { // 204 No Content is a success for DELETE
       console.log(`Baserow Response: ${response.status} ${response.statusText} (No Content for ${method} ${url})`);
       return null; 
     }
     
     const responseData = await response.json();
-    console.log(`Baserow Response Data for ${method} ${url}:`, JSON.stringify(responseData, null, 2));
+    // console.log(`Baserow Response Data for ${method} ${url}:`, JSON.stringify(responseData, null, 2));
     return responseData;
 
   } catch (error: any) {
-    console.error('Error in makeBaserowRequest:', { message: error.message, endpoint, method });
-    throw error;
+    console.error(`Error in makeBaserowRequest to ${url} with method ${method}:`, error.message);
+    throw error; // Re-throw to be handled by calling function
   }
 }
 
@@ -121,7 +124,6 @@ export async function getUserById(rowId: number): Promise<UserRecord | null> {
 export async function updateUser(rowId: number, updates: Partial<UserRecord>): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/${rowId}/?user_field_names=true`;
   const fieldsToUpdate: { [key: string]: any } = {};
-  // Filter out id and order from updates, as Baserow handles these automatically or they are part of the URL.
   for (const key in updates) {
     if (key !== 'id' && key !== 'order' && Object.prototype.hasOwnProperty.call(updates, key)) {
       fieldsToUpdate[key] = (updates as any)[key];
@@ -136,7 +138,7 @@ export async function updateUser(rowId: number, updates: Partial<UserRecord>): P
     return updatedUser;
   } catch (error) {
     console.error(`Failed to update user ${rowId} in table ${BASEROW_TEAM_TABLE_ID}:`, error);
-    throw error; // Re-throw to be caught by server action
+    throw error; 
   }
 }
 
@@ -161,7 +163,7 @@ export async function getCeoByEmail(email: string): Promise<CeoUserRecord | null
     }
     return null;
   } catch (error) {
-    console.error(`Failed to fetch CEO by email ${email} from CEO table:`, error);
+    console.error(`Failed to fetch CEO by email ${email} from CEO table ${BASEROW_CEO_TABLE_ID}:`, error);
     return null;
   }
 }
@@ -177,7 +179,7 @@ export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRec
   try {
     return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
   } catch (error) {
-    console.error(`Failed to update CEO record ${rowId} in CEO table:`, error);
+    console.error(`Failed to update CEO record ${rowId} in CEO table ${BASEROW_CEO_TABLE_ID}:`, error);
     return null;
   }
 }
@@ -189,7 +191,7 @@ export async function fetchSubjectNotes(): Promise<SubjectNoteRecord[]> {
     const data = await makeBaserowRequest(endpoint, 'GET');
     return (data?.results || []) as SubjectNoteRecord[];
   } catch (error) {
-    console.error('Failed to fetch subject notes:', error);
+    console.error(`Failed to fetch subject notes from table ${BASEROW_SUBJECT_NOTES_TABLE_ID}:`, error);
     return [];
   }
 }
@@ -199,7 +201,7 @@ export async function createSubjectNote(noteData: { Subject?: string; Chapter?: 
   try {
     return await makeBaserowRequest(endpoint, 'POST', noteData);
   } catch (error) {
-    console.error('Failed to create subject note:', error);
+    console.error(`Failed to create subject note in table ${BASEROW_SUBJECT_NOTES_TABLE_ID}:`, error);
     return null;
   }
 }
@@ -209,15 +211,15 @@ export async function updateSubjectNote(
   updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'ID'>> 
 ): Promise<SubjectNoteRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/?user_field_names=true`;
-  console.log(`--- Service: updateSubjectNote ---`);
+  console.log(`--- Service: updateSubjectNote (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}) ---`);
   console.log(`Attempting to PATCH URL: ${BASEROW_API_URL}${endpoint}`);
   console.log(`With payload:`, JSON.stringify(updates, null, 2));
   try {
     const result = await makeBaserowRequest(endpoint, 'PATCH', updates);
-    console.log(`Baserow PATCH response for row ${rowId} in updateSubjectNote:`, JSON.stringify(result, null, 2));
+    console.log(`Baserow PATCH response for row ${rowId} in table ${BASEROW_SUBJECT_NOTES_TABLE_ID}:`, result ? JSON.stringify(result, null, 2) : "null/undefined");
     return result; 
   } catch (error) {
-    console.error(`Failed to update subject note ${rowId} in service:`, error);
+    console.error(`Failed to update subject note ${rowId} in table ${BASEROW_SUBJECT_NOTES_TABLE_ID} (service level):`, error);
     return null;
   }
 }
@@ -228,7 +230,7 @@ export async function deleteSubjectNote(rowId: number): Promise<boolean> {
     await makeBaserowRequest(endpoint, 'DELETE');
     return true; 
   } catch (error) {
-    console.error(`Failed to delete subject note ${rowId}:`, error);
+    console.error(`Failed to delete subject note ${rowId} from table ${BASEROW_SUBJECT_NOTES_TABLE_ID}:`, error);
     return false;
   }
 }
