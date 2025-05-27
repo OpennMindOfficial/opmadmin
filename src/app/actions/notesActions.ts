@@ -5,7 +5,8 @@
 import { 
   fetchSubjectNotes, 
   createSubjectNote, 
-  deleteSubjectNote,
+  deleteSubjectNote, // Kept for potential future use, but not used by edit
+  updateSubjectNote, // This will now be used by editSubjectNoteAction
   type SubjectNoteRecord 
 } from '@/services/baserowService';
 
@@ -37,11 +38,6 @@ export async function addSubjectNoteAction(data: {
   notes: string;
 }): Promise<AddNoteResult> {
   try {
-    // Basic validation (can be uncommented or enhanced with Zod if needed)
-    // if (!data.subject || !data.chapter || !data.notes) {
-    //   return { success: false, error: 'Subject, Chapter, and Notes cannot be empty.' };
-    // }
-
     const newNotePayload = {
       Subject: data.subject,
       Chapter: data.chapter,
@@ -50,7 +46,6 @@ export async function addSubjectNoteAction(data: {
 
     const createdNote = await createSubjectNote(newNotePayload);
 
-    // More robust check: ensure createdNote is not null and has an id and order
     if (!createdNote || typeof createdNote.id !== 'number' || typeof createdNote.order !== 'string') {
       console.error('Failed to create note in Baserow or received incomplete/invalid data. Response:', createdNote);
       return { success: false, error: 'Failed to create note in Baserow or received incomplete/invalid data.' };
@@ -67,6 +62,7 @@ interface DeleteNoteResult {
   error?: string;
 }
 
+// This action is no longer used by editSubjectNoteAction but kept for potential direct deletion features.
 export async function deleteSubjectNoteAction(id: number): Promise<DeleteNoteResult> {
   try {
     const success = await deleteSubjectNote(id);
@@ -83,45 +79,41 @@ export async function deleteSubjectNoteAction(id: number): Promise<DeleteNoteRes
 
 interface EditNoteResult {
   success: boolean;
-  note?: SubjectNoteRecord; // This will be the NEWLY created note
+  note?: SubjectNoteRecord;
   error?: string;
 }
 
+// Reverted to direct update
 export async function editSubjectNoteAction(
-  originalNoteId: number,
+  noteId: number,
   newData: { subject: string; chapter: string; notes: string }
 ): Promise<EditNoteResult> {
   try {
-    // 1. Create the new note with the updated data
-    const creationResult = await addSubjectNoteAction({
-      subject: newData.subject,
-      chapter: newData.chapter,
-      notes: newData.notes,
-    });
+    // Prepare the payload for Baserow. It expects field names as they are in Baserow.
+    const payloadToUpdate = {
+      Subject: newData.subject,
+      Chapter: newData.chapter,
+      Notes: newData.notes,
+    };
 
-    if (!creationResult.success || !creationResult.note) {
-      // Error already logged in addSubjectNoteAction if creation failed
-      return { success: false, error: creationResult.error || 'Failed to create the new version of the note.' };
+    const updatedNote = await updateSubjectNote(noteId, payloadToUpdate);
+
+    if (!updatedNote) {
+      console.error(`Failed to update note ${noteId} in Baserow or received no data back. Baserow response:`, updatedNote);
+      return { success: false, error: 'Failed to update note. The operation might have succeeded silently or returned no content.' };
+    }
+    
+    // Baserow PATCH should return the updated row with an ID.
+    // If updatedNote is null and the request was successful (204 No Content), this check will also fail.
+    // However, a 200 OK with the updated row is expected.
+    if (typeof updatedNote.id !== 'number') {
+        console.error(`Baserow update response for note ${noteId} did not include a valid note ID. Response:`, updatedNote);
+        return { success: false, error: 'Baserow update response was invalid.' };
     }
 
-    // 2. If creation was successful (meaning we have a valid new note), delete the old note
-    const deletionResult = await deleteSubjectNoteAction(originalNoteId);
-
-    if (!deletionResult.success) {
-      // Log the error, but proceed with the success of creation.
-      console.error(`Failed to delete original note ${originalNoteId} after creating new version: ${deletionResult.error}`);
-      // Return the newly created note anyway, as the primary operation (update as creation) succeeded.
-      // Add a specific error message to the result if deletion failed.
-      return { 
-        success: true, 
-        note: creationResult.note, 
-        error: `Note content updated and new record created, but failed to delete the old version (ID: ${originalNoteId}). Error: ${deletionResult.error}` 
-      };
-    }
-
-    return { success: true, note: creationResult.note }; // Return the newly created note
+    return { success: true, note: updatedNote };
   } catch (error: any) {
-    console.error('Error in editSubjectNoteAction (delete and recreate):', error);
+    console.error(`Error in editSubjectNoteAction for note ${noteId}:`, error);
     return { success: false, error: error.message || 'An unexpected error occurred while updating the note.' };
   }
 }
