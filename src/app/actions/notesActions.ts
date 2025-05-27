@@ -5,7 +5,7 @@
 import { 
   fetchSubjectNotes, 
   createSubjectNote, 
-  deleteSubjectNote, // Import deleteSubjectNote
+  deleteSubjectNote,
   type SubjectNoteRecord 
 } from '@/services/baserowService';
 
@@ -37,19 +37,25 @@ export async function addSubjectNoteAction(data: {
   notes: string;
 }): Promise<AddNoteResult> {
   try {
-    if (!data.subject || !data.chapter || !data.notes) {
-      // This basic validation can be enhanced with Zod if needed
-      // return { success: false, error: 'Subject, Chapter, and Notes cannot be empty.' };
-    }
-    const newNote = await createSubjectNote({
+    // Basic validation (can be uncommented or enhanced with Zod if needed)
+    // if (!data.subject || !data.chapter || !data.notes) {
+    //   return { success: false, error: 'Subject, Chapter, and Notes cannot be empty.' };
+    // }
+
+    const newNotePayload = {
       Subject: data.subject,
       Chapter: data.chapter,
       Notes: data.notes,
-    });
-    if (!newNote) {
-      return { success: false, error: 'Failed to create note in Baserow.' };
+    };
+
+    const createdNote = await createSubjectNote(newNotePayload);
+
+    // More robust check: ensure createdNote is not null and has an id and order
+    if (!createdNote || typeof createdNote.id !== 'number' || typeof createdNote.order !== 'string') {
+      console.error('Failed to create note in Baserow or received incomplete/invalid data. Response:', createdNote);
+      return { success: false, error: 'Failed to create note in Baserow or received incomplete/invalid data.' };
     }
-    return { success: true, note: newNote };
+    return { success: true, note: createdNote };
   } catch (error: any) {
     console.error('Error in addSubjectNoteAction:', error);
     return { success: false, error: error.message || 'An unexpected error occurred while adding the note.' };
@@ -94,10 +100,11 @@ export async function editSubjectNoteAction(
     });
 
     if (!creationResult.success || !creationResult.note) {
+      // Error already logged in addSubjectNoteAction if creation failed
       return { success: false, error: creationResult.error || 'Failed to create the new version of the note.' };
     }
 
-    // 2. If creation was successful, delete the old note
+    // 2. If creation was successful (meaning we have a valid new note), delete the old note
     const deletionResult = await deleteSubjectNoteAction(originalNoteId);
 
     if (!deletionResult.success) {
