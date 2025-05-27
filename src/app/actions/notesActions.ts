@@ -5,7 +5,7 @@
 import { 
   fetchSubjectNotes, 
   createSubjectNote, 
-  updateSubjectNote,
+  deleteSubjectNote, // Import deleteSubjectNote
   type SubjectNoteRecord 
 } from '@/services/baserowService';
 
@@ -56,46 +56,65 @@ export async function addSubjectNoteAction(data: {
   }
 }
 
-interface EditNoteResult {
+interface DeleteNoteResult {
   success: boolean;
-  note?: SubjectNoteRecord;
   error?: string;
 }
 
-// This action now expects all fields to be potentially provided for an update.
+export async function deleteSubjectNoteAction(id: number): Promise<DeleteNoteResult> {
+  try {
+    const success = await deleteSubjectNote(id);
+    if (!success) {
+      return { success: false, error: 'Failed to delete note from Baserow.' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error in deleteSubjectNoteAction:', error);
+    return { success: false, error: error.message || 'An unexpected error occurred while deleting the note.' };
+  }
+}
+
+
+interface EditNoteResult {
+  success: boolean;
+  note?: SubjectNoteRecord; // This will be the NEWLY created note
+  error?: string;
+}
+
 export async function editSubjectNoteAction(
-  id: number,
-  data: { subject?: string; chapter?: string; notes?: string }
+  originalNoteId: number,
+  newData: { subject: string; chapter: string; notes: string }
 ): Promise<EditNoteResult> {
   try {
-    // Construct the payload ensuring that if a field is provided (even as an empty string),
-    // it's included. Baserow typically interprets sending a field with an empty string
-    // as clearing that field. If a field is 'undefined', it's not sent.
-    const payload: Partial<Omit<SubjectNoteRecord, 'id' | 'order'>> = {};
-    
-    if (data.subject !== undefined) {
-      payload.Subject = data.subject;
-    }
-    if (data.chapter !== undefined) {
-      payload.Chapter = data.chapter;
-    }
-    if (data.notes !== undefined) {
-      payload.Notes = data.notes;
+    // 1. Create the new note with the updated data
+    const creationResult = await addSubjectNoteAction({
+      subject: newData.subject,
+      chapter: newData.chapter,
+      notes: newData.notes,
+    });
+
+    if (!creationResult.success || !creationResult.note) {
+      return { success: false, error: creationResult.error || 'Failed to create the new version of the note.' };
     }
 
-    if (Object.keys(payload).length === 0) {
-        // Optionally, handle the case where no actual data is being sent to update.
-        // For now, we'll let it proceed, Baserow should handle an empty PATCH gracefully.
+    // 2. If creation was successful, delete the old note
+    const deletionResult = await deleteSubjectNoteAction(originalNoteId);
+
+    if (!deletionResult.success) {
+      // Log the error, but proceed with the success of creation.
+      console.error(`Failed to delete original note ${originalNoteId} after creating new version: ${deletionResult.error}`);
+      // Return the newly created note anyway, as the primary operation (update as creation) succeeded.
+      // Add a specific error message to the result if deletion failed.
+      return { 
+        success: true, 
+        note: creationResult.note, 
+        error: `Note content updated and new record created, but failed to delete the old version (ID: ${originalNoteId}). Error: ${deletionResult.error}` 
+      };
     }
 
-    const updatedNote = await updateSubjectNote(id, payload);
-    
-    if (!updatedNote) {
-      return { success: false, error: 'Failed to update note in Baserow. The record might not have been found or no changes were made.' };
-    }
-    return { success: true, note: updatedNote };
+    return { success: true, note: creationResult.note }; // Return the newly created note
   } catch (error: any) {
-    console.error('Error in editSubjectNoteAction:', error);
+    console.error('Error in editSubjectNoteAction (delete and recreate):', error);
     return { success: false, error: error.message || 'An unexpected error occurred while updating the note.' };
   }
 }

@@ -68,7 +68,8 @@ async function makeBaserowRequest(
       throw new Error(errorData.detail || `Baserow API request failed: ${response.statusText}`);
     }
     if (method === 'GET' || method === 'PATCH' || method === 'POST') {
-      if (response.status === 204) return null; 
+      if (response.status === 204 && (method === 'PATCH' || method === 'POST')) return null; // Handle 204 for PATCH/POST if no body expected
+      if (response.status === 204) return null; // Handle 204 for GET (though unlikely for row fetch)
       return await response.json();
     }
     return null; 
@@ -177,10 +178,24 @@ export async function createSubjectNote(noteData: { Subject?: string; Chapter?: 
 export async function updateSubjectNote(rowId: number, updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order'>>): Promise<SubjectNoteRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/?user_field_names=true`;
   try {
-    return await makeBaserowRequest(endpoint, 'PATCH', updates);
+    // Baserow PATCH returns 200 OK with the updated row data.
+    // If it returns 204 No Content, it means the request was successful but there's no body.
+    // However, for row updates, Baserow typically returns the updated row.
+    const result = await makeBaserowRequest(endpoint, 'PATCH', updates);
+    return result; // This should be the updated SubjectNoteRecord or null if 204
   } catch (error) {
     console.error(`Failed to update subject note ${rowId}:`, error);
     return null;
   }
 }
 
+export async function deleteSubjectNote(rowId: number): Promise<boolean> {
+  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/`;
+  try {
+    await makeBaserowRequest(endpoint, 'DELETE');
+    return true; // Baserow DELETE returns 204 No Content on success
+  } catch (error) {
+    console.error(`Failed to delete subject note ${rowId}:`, error);
+    return false;
+  }
+}
