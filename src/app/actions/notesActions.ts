@@ -6,7 +6,7 @@ import {
   fetchSubjectNotes,
   createSubjectNote,
   deleteSubjectNote,
-  updateSubjectNote,
+  updateSubjectNote, // Ensure this service function is robust
   type SubjectNoteRecord
 } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
@@ -96,57 +96,60 @@ interface EditNoteResult {
 }
 
 export async function editSubjectNoteAction(
-  noteId: number,
+  noteId: number, // This MUST be Baserow's internal row ID
   newData: { subject: string; chapter: string; notes: string }
 ): Promise<EditNoteResult> {
-  console.log('--- Starting editSubjectNoteAction ---');
-  console.log('Attempting to edit note with noteId (system ID):', noteId); // Log the noteId being used
-  console.log('Received newData for edit (from client form):', JSON.stringify(newData, null, 2));
+  console.log('--- editSubjectNoteAction: INITIATED ---');
+  console.log(`Attempting to edit note with Baserow internal ID: ${noteId}`);
+  console.log('Data received for update (from client form):', JSON.stringify(newData, null, 2));
+
+  // Construct the payload with exact field names expected by Baserow
+  // Ensure these (Subject, Chapter, Notes) are the EXACT case-sensitive field names in your Baserow table.
+  const payloadToUpdate: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'ID'>> = {
+    Subject: newData.subject,
+    Chapter: newData.chapter,
+    Notes: newData.notes,
+  };
+
+  console.log('Payload being sent to updateSubjectNote service:', JSON.stringify(payloadToUpdate, null, 2));
 
   try {
-    const payloadToUpdate = {
-      Subject: newData.subject,
-      Chapter: newData.chapter,
-      Notes: newData.notes,
-    };
-
-    console.log('Payload constructed for Baserow update:', JSON.stringify(payloadToUpdate, null, 2));
-
     const updatedNoteFromService = await updateSubjectNote(noteId, payloadToUpdate);
-    console.log('Response from updateSubjectNote service:', JSON.stringify(updatedNoteFromService, null, 2));
 
-    if (!updatedNoteFromService) {
-      console.error(`Failed to update note ${noteId}. updateSubjectNote service returned null or undefined.`);
-      return { success: false, error: 'Failed to update note. Baserow service did not return updated data.' };
+    // Log the raw response from the service layer
+    console.log('Response from updateSubjectNote service (Baserow PATCH response):', JSON.stringify(updatedNoteFromService, null, 2));
+
+    // Check if the update was successful based on the service's response
+    // A successful PATCH to Baserow should return the updated row object.
+    if (updatedNoteFromService && typeof updatedNoteFromService.id === 'number') {
+      console.log(`editSubjectNoteAction: Update for noteId ${noteId} appears successful based on service response.`);
+      
+      // Optional: Verify if returned data matches sent data (for deeper debugging if needed)
+      const dataMatched = 
+          updatedNoteFromService.Subject === payloadToUpdate.Subject &&
+          updatedNoteFromService.Chapter === payloadToUpdate.Chapter &&
+          updatedNoteFromService.Notes === payloadToUpdate.Notes;
+
+      if (!dataMatched) {
+          console.warn(`POTENTIAL DATA MISMATCH or Baserow quirk for noteId ${noteId}: Baserow's response data does not exactly match the sent payload. The update might have occurred but Baserow's response differs, or a specific field wasn't updated as expected. Sent: ${JSON.stringify(payloadToUpdate)}, Received: ${JSON.stringify(updatedNoteFromService)}`);
+          // Depending on strictness, you could treat this as an error or proceed.
+          // For now, we proceed if we got a valid row object back.
+      }
+
+      revalidatePath('/actions/create-subject-notes');
+      console.log(`editSubjectNoteAction: Path /actions/create-subject-notes revalidated for noteId ${noteId}.`);
+      console.log('--- editSubjectNoteAction: COMPLETED (Success) ---');
+      return { success: true, note: updatedNoteFromService };
+    } else {
+      // This case means updateSubjectNote returned null or an invalid object,
+      // indicating the PATCH likely failed at the API level or didn't return the expected row data.
+      console.error(`editSubjectNoteAction: Update failed for noteId ${noteId}. updateSubjectNote service returned null or an invalid object. Response was: ${JSON.stringify(updatedNoteFromService)}`);
+      console.log('--- editSubjectNoteAction: COMPLETED (Failure) ---');
+      return { success: false, error: 'Failed to update note in Baserow. The service did not return valid updated data.' };
     }
-    
-    if (typeof updatedNoteFromService.id !== 'number') {
-        console.error(`Baserow update response for note ${noteId} was invalid (e.g., missing ID or not a row object). Response:`, JSON.stringify(updatedNoteFromService, null, 2));
-        return { success: false, error: 'Baserow update response was invalid. Data might not have been saved.' };
-    }
-    
-    // Check if the data returned actually matches what we tried to send
-    // This is a softer check than before, primarily for logging.
-    const dataMatched = 
-        updatedNoteFromService.Subject === payloadToUpdate.Subject &&
-        updatedNoteFromService.Chapter === payloadToUpdate.Chapter &&
-        updatedNoteFromService.Notes === payloadToUpdate.Notes;
-
-    if (!dataMatched) {
-        console.warn(`POTENTIAL DATA MISMATCH or Baserow quirk: Baserow update for note ${noteId} returned data that does not exactly match the sent payload. This is a warning. The update might have occurred but Baserow's response might differ slightly (e.g. field order, last_modified timestamps not included in our check). Or, Baserow might not have applied all changes for a specific field.`);
-        console.warn(`Sent Payload: ${JSON.stringify(payloadToUpdate)}`);
-        console.warn(`Received Data: ${JSON.stringify(updatedNoteFromService)}`);
-        // For now, we will proceed as if successful for the UI, but this indicates a potential issue to investigate if data isn't visually updating.
-    }
-
-    revalidatePath('/actions/create-subject-notes');
-    console.log(`editSubjectNoteAction successful for noteId ${noteId}. Path /actions/create-subject-notes revalidated.`);
-    console.log('--- Ending editSubjectNoteAction (Success) ---');
-    return { success: true, note: updatedNoteFromService }; // Return the note data received from Baserow
-
   } catch (error: any) {
-    console.error(`Critical error in editSubjectNoteAction for note ${noteId}:`, error.message, error.stack);
-    console.log('--- Ending editSubjectNoteAction (Error) ---');
-    return { success: false, error: error.message || 'An unexpected error occurred while updating the note.' };
+    console.error(`editSubjectNoteAction: CRITICAL ERROR during update for noteId ${noteId}:`, error.message, error.stack);
+    console.log('--- editSubjectNoteAction: COMPLETED (Critical Error) ---');
+    return { success: false, error: error.message || 'An unexpected critical error occurred while updating the note.' };
   }
 }
