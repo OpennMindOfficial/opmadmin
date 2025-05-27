@@ -4,11 +4,12 @@
 
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { MetricsOverview } from '@/components/dashboard/metrics-overview';
-import { CourseStatusSection } from '@/components/dashboard/course-status-section';
 import { Button } from '@/components/ui/button';
 import { FileQuestion as PageIcon, PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function AddQuestionsPage() {
+  // Placeholder content - Full implementation in a subsequent request
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <NewTopNav />
@@ -20,27 +21,31 @@ export default function AddQuestionsPage() {
               <h1 className="text-4xl font-bold tracking-tight">Add Questions to QB</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
-              Expand the question bank by adding new questions and answers.
+              Expand the question bank by adding new questions and solutions, individually or in bulk. (Table ID: 552908)
             </p>
           </div>
+        </section>
+
+        <section className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add New Question / Bulk Add</CardTitle>
+              <CardDescription>Form for individual and bulk question/solution entry will be implemented here.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">[Question entry form placeholder]</p>
+              <p className="text-muted-foreground mt-2">[Table for existing questions will be implemented here.]</p>
+            </CardContent>
+          </Card>
         </section>
 
         <section className="space-y-6">
           <h2 className="text-2xl font-semibold">Key Metrics</h2>
           <MetricsOverview />
         </section>
-
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">Content Status Overview</h2>
-            <Button variant="outline">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Note
-            </Button>
-          </div>
-          <CourseStatusSection />
-        </section>
       </main>
     </div>
   );
 }
+
+    

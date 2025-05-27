@@ -28,7 +28,7 @@ export default function DashboardRedesignPage() {
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [currentUserEmailForPasswordChange, setCurrentUserEmailForPasswordChange] = useState('');
   const [currentUserFullName, setCurrentUserFullName] = useState('');
-  const [greeting, setGreeting] = useState('Morning');
+  const [greeting, setGreeting] = useState('Good morning');
   const [userFirstName, setUserFirstName] = useState('');
   const [isCeoLoggedIn, setIsCeoLoggedIn] = useState(false);
 
@@ -37,15 +37,17 @@ export default function DashboardRedesignPage() {
     const storedEmail = localStorage.getItem('currentUserEmail');
     const storedFullName = localStorage.getItem('currentUserFullName');
     const storedIsCeo = localStorage.getItem('isCeoLoggedIn') === 'true';
+    const storedUserIdStr = localStorage.getItem('userId'); // Get user ID
+    const userId = storedUserIdStr ? parseInt(storedUserIdStr) : null;
 
-    if (storedEmail) {
+    if (storedEmail && userId) {
       setIsAuthenticated(true);
       setShowLoginDialog(false);
       setCurrentUserFullName(storedFullName || '');
       setIsCeoLoggedIn(storedIsCeo);
 
       if (!storedIsCeo) { 
-        updateUserLastActive(storedEmail)
+        updateUserLastActive(userId) // Pass userId
           .then(res => {
             if (res.success && res.userName) {
               setCurrentUserFullName(res.userName);
@@ -95,13 +97,17 @@ export default function DashboardRedesignPage() {
   }, [currentUserFullName, isAuthenticated]);
 
 
-  const handleLoginSuccess = (email: string, userName: string, isCeo?: boolean) => {
+  const handleLoginSuccess = (email: string, userName: string, userId?: number, userRole?: string, isCeo?: boolean, authMethod?: string) => {
     setIsAuthenticated(true);
     setShowLoginDialog(false); 
     setCurrentUserFullName(userName);
     setIsCeoLoggedIn(!!isCeo);
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
+    if (userId) localStorage.setItem('userId', userId.toString());
+    if (userRole) localStorage.setItem('userRole', userRole);
+    if (authMethod) localStorage.setItem('authMethod', authMethod);
+
     if (isCeo) {
         localStorage.setItem('isCeoLoggedIn', 'true');
     } else {
@@ -109,20 +115,24 @@ export default function DashboardRedesignPage() {
     }
   };
 
-  const handleFirstTimeLogin = (email: string, userName: string) => {
+  const handleFirstTimeLogin = (email: string, userName: string, userId?: number, userRole?: string, authMethod?: string) => {
     setCurrentUserEmailForPasswordChange(email);
     setCurrentUserFullName(userName); 
+    if (userId) localStorage.setItem('userId', userId.toString()); // Store userId for password change
+    if (userRole) localStorage.setItem('userRole', userRole);
+    if (authMethod) localStorage.setItem('authMethod', authMethod);
     setShowLoginDialog(false); 
     setShowChangePasswordDialog(true);
   };
 
-  const handlePasswordChangedSuccess = (email: string, userName: string) => {
+  const handlePasswordChangedSuccess = (email: string, userName: string, userId?: number) => {
     setIsAuthenticated(true); 
     setShowChangePasswordDialog(false);
     setCurrentUserFullName(userName);
     setIsCeoLoggedIn(false); 
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
+    if (userId) localStorage.setItem('userId', userId.toString());
     localStorage.removeItem('isCeoLoggedIn');
   };
 
@@ -130,6 +140,9 @@ export default function DashboardRedesignPage() {
     localStorage.removeItem('currentUserEmail');
     localStorage.removeItem('currentUserFullName');
     localStorage.removeItem('isCeoLoggedIn');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('authMethod');
     setIsAuthenticated(false);
     setShowLoginDialog(true);
     setShowChangePasswordDialog(false);
@@ -151,7 +164,7 @@ export default function DashboardRedesignPage() {
           }
         }}
         onPasswordChangedSuccess={handlePasswordChangedSuccess}
-        userEmail={currentUserEmailForPasswordChange}
+        userEmail={currentUserEmailForPasswordChange} // Kept for legacy, though userId is preferred
         userName={currentUserFullName}
       />
     );
@@ -164,7 +177,8 @@ export default function DashboardRedesignPage() {
         onOpenChange={(isOpen) => {
           setShowLoginDialog(isOpen); 
           if (!isOpen && !isAuthenticated && !showChangePasswordDialog && !localStorage.getItem('currentUserEmail')) {
-            setShowLoginDialog(true); 
+            // This condition might need adjustment if closing the dialog is intended to always re-show it
+            // setShowLoginDialog(true); // Reconsider this if non-auth closure should lead to a blank page
           }
         }}
         onLoginSuccess={handleLoginSuccess}
@@ -182,7 +196,7 @@ export default function DashboardRedesignPage() {
           <section className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="space-y-2">
               <h1 className="text-4xl font-bold tracking-tight">
-                {greeting}, {userFirstName || (isCeoLoggedIn ? 'CEO' : 'User')}!
+                 {greeting}, {userFirstName || (isCeoLoggedIn ? 'CEO' : 'User')}!
               </h1>
               <p className="text-lg text-muted-foreground">
                  {isCeoLoggedIn
@@ -197,7 +211,7 @@ export default function DashboardRedesignPage() {
                 width={600}
                 height={400}
                 className="rounded-lg object-cover"
-                data-ai-hint="application logo abstract"
+                data-ai-hint="application logo"
                 priority 
               />
             </div>
@@ -221,7 +235,7 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="Add Subject"
-                description="Introduce a new subject area or course to the learning platform."
+                description="Introduce a new subject area, topics, and chapters to the learning platform."
                 imageHint="subject plus"
                 actionIcon={PlusCircleIcon}
                 cardVariant="task"
@@ -230,7 +244,7 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="View Reported Bugs"
-                description="Track, review, and manage software bugs reported by users."
+                description="Track, review, and manage software bugs reported by users and team members."
                 imageHint="bug report"
                 actionIcon={Bug}
                 cardVariant="data"
@@ -239,7 +253,7 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="Edit About Us"
-                description="Update the 'About Us' page content for the platform."
+                description="Update the 'Mission' and 'Story' sections of the platform's About Us page."
                 imageHint="content edit"
                 actionIcon={FileText}
                 cardVariant="content"
@@ -248,7 +262,7 @@ export default function DashboardRedesignPage() {
               />
                <NewActionCard
                 title="Add Facts"
-                description="Contribute interesting and relevant facts to the platform's knowledge base."
+                description="Contribute interesting facts with categories, sources, and images."
                 imageHint="fact list"
                 actionIcon={ListPlus}
                 cardVariant="task"
@@ -257,7 +271,7 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="Performance Tracking"
-                description="Analyze user performance metrics and engagement statistics."
+                description="Analyze user study habits, goal progress, and subject performance metrics."
                 imageHint="analytics chart"
                 actionIcon={BarChart3}
                 cardVariant="data"
@@ -266,7 +280,7 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="Add Questions to QB"
-                description="Expand the question bank by adding new questions and answers."
+                description="Expand the question bank by adding new questions and solutions, individually or in bulk."
                 imageHint="question bank"
                 actionIcon={FileQuestion}
                 cardVariant="page"
@@ -275,7 +289,7 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="NCERT Sources"
-                description="Manage and reference NCERT educational materials and resources."
+                description="Manage and reference NCERT educational materials, including audio resources."
                 imageHint="education book"
                 actionIcon={Library}
                 cardVariant="content"
@@ -284,16 +298,16 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="User's Account Data"
-                description="Access and manage individual user account details and settings."
+                description="Access and manage individual user account details and settings (secure access)."
                 imageHint="user profile"
-                actionIcon={Users}
+                actionIcon={Users} // Consider UserCog for management
                 cardVariant="account"
                 primaryActionLabel="Manage"
                 href="/actions/user-accounts"
               />
               <NewActionCard
                 title="Pro Users"
-                description="View and manage premium 'Pro' user accounts and subscriptions."
+                description="Manage premium 'Pro' user subscriptions and details (secure access)."
                 imageHint="premium star"
                 actionIcon={Star}
                 cardVariant="account"
@@ -302,7 +316,7 @@ export default function DashboardRedesignPage() {
               />
                <NewActionCard
                 title="API in Use"
-                description="Monitor the status and usage of currently active APIs."
+                description="Monitor the status and usage of currently active internal and external APIs."
                 imageHint="api connection"
                 actionIcon={PlugZap}
                 cardVariant="server"
@@ -311,7 +325,7 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="API Testing"
-                description="Perform tests and diagnostics on various API endpoints for stability."
+                description="Perform tests and diagnostics on various API endpoints for stability and performance."
                 imageHint="test development"
                 actionIcon={TestTube2}
                 cardVariant="server"
@@ -320,7 +334,7 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="Account Changes (User)"
-                description="Review recent modifications and updates to user accounts."
+                description="Review recent modifications and updates to user accounts and profiles."
                 imageHint="user settings"
                 actionIcon={UserCog}
                 cardVariant="account"
@@ -329,7 +343,7 @@ export default function DashboardRedesignPage() {
               />
               <NewActionCard
                 title="Add Notifications"
-                description="Create and dispatch platform-wide notifications to users."
+                description="Create and dispatch platform-wide or targeted notifications to users."
                 imageHint="alert message"
                 actionIcon={BellPlus}
                 cardVariant="communication"
@@ -340,14 +354,14 @@ export default function DashboardRedesignPage() {
                 title="Website Traffic"
                 description="Analyze data on website visits, user flow, and engagement patterns."
                 imageHint="analytics traffic"
-                actionIcon={ActivityIconLucide}
+                actionIcon={ActivityIconLucide} // Using generic Activity, consider specific analytics icon if available
                 cardVariant="data"
                 primaryActionLabel="Analyze"
                 href="/actions/website-traffic"
               />
               <NewActionCard
                 title="AI Usage"
-                description="Track metrics and patterns related to AI feature utilization."
+                description="Track metrics and patterns related to AI feature utilization and performance."
                 imageHint="ai brain"
                 actionIcon={BrainCircuit}
                 cardVariant="data"
@@ -407,8 +421,12 @@ export default function DashboardRedesignPage() {
     );
   }
 
+  // Fallback for non-authenticated, non-dialog state
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
+      {/* Optionally, add a loading spinner or a minimal message here if needed */}
     </div>
   );
 }
+
+    

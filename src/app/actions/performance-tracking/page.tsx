@@ -4,11 +4,12 @@
 
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { MetricsOverview } from '@/components/dashboard/metrics-overview';
-import { CourseStatusSection } from '@/components/dashboard/course-status-section';
 import { Button } from '@/components/ui/button';
 import { BarChart3 as PageIcon, PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function PerformanceTrackingPage() {
+  // Placeholder content - Full implementation in a subsequent request
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <NewTopNav />
@@ -20,27 +21,32 @@ export default function PerformanceTrackingPage() {
               <h1 className="text-4xl font-bold tracking-tight">Performance Tracking</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
-              Analyze user performance metrics and engagement statistics.
+              Analyze user study habits, goal progress, and subject performance metrics. This page will feature a dropdown to switch between two data views.
             </p>
           </div>
+        </section>
+
+        <section className="space-y-6">
+           <Card>
+            <CardHeader>
+              <CardTitle>User Performance Data</CardTitle>
+              <CardDescription>
+                Dropdown to select data view (User Main Data - ID 546405 / Subject Data - ID 546409) and table will be implemented here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">[Dropdown and data table placeholder]</p>
+            </CardContent>
+          </Card>
         </section>
 
         <section className="space-y-6">
           <h2 className="text-2xl font-semibold">Key Metrics</h2>
           <MetricsOverview />
         </section>
-
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">Content Status Overview</h2>
-            <Button variant="outline">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Note
-            </Button>
-          </div>
-          <CourseStatusSection />
-        </section>
       </main>
     </div>
   );
 }
+
+    

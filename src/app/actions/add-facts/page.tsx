@@ -4,11 +4,13 @@
 
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { MetricsOverview } from '@/components/dashboard/metrics-overview';
-import { CourseStatusSection } from '@/components/dashboard/course-status-section';
 import { Button } from '@/components/ui/button';
 import { ListPlus as PageIcon, PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
 
 export default function AddFactsPage() {
+  // Placeholder content - Full implementation in a subsequent request
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <NewTopNav />
@@ -20,9 +22,22 @@ export default function AddFactsPage() {
               <h1 className="text-4xl font-bold tracking-tight">Add Facts</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
-              Contribute interesting and relevant facts to the platform's knowledge base.
+              Contribute interesting facts with categories, sources, and images. This page will feature a form to add facts and a paginated table to display them.
             </p>
           </div>
+        </section>
+
+        <section className="space-y-6">
+           <Card>
+            <CardHeader>
+              <CardTitle>Add New Fact</CardTitle>
+              <CardDescription>Form for adding facts will be implemented here. (Table ID: 542791)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">[Fact submission form placeholder]</p>
+              <p className="text-muted-foreground mt-2">[Table for existing facts with pagination (20 per page) will be implemented here.]</p>
+            </CardContent>
+          </Card>
         </section>
 
         <section className="space-y-6">
@@ -30,6 +45,8 @@ export default function AddFactsPage() {
           <MetricsOverview />
         </section>
 
+        {/* Remove original CourseStatusSection if not needed, or adapt for facts context */}
+        {/* 
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold">Content Status Overview</h2>
@@ -40,7 +57,10 @@ export default function AddFactsPage() {
           </div>
           <CourseStatusSection />
         </section>
+        */}
       </main>
     </div>
   );
 }
+
+    

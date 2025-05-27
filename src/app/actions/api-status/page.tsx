@@ -4,11 +4,12 @@
 
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { MetricsOverview } from '@/components/dashboard/metrics-overview';
-import { CourseStatusSection } from '@/components/dashboard/course-status-section';
 import { Button } from '@/components/ui/button';
 import { PlugZap as PageIcon, PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function ApiStatusPage() {
+  // Placeholder - Full implementation later
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <NewTopNav />
@@ -20,27 +21,30 @@ export default function ApiStatusPage() {
               <h1 className="text-4xl font-bold tracking-tight">API in Use</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
-              Monitor the status and usage of currently active APIs.
+              Monitor the status and usage of currently active APIs. (Specific Baserow table TBD)
             </p>
           </div>
+        </section>
+
+        <section className="space-y-6">
+           <Card>
+            <CardHeader>
+              <CardTitle>API Status Dashboard</CardTitle>
+              <CardDescription>Real-time status and metrics for APIs will be displayed here.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">[API status display placeholder]</p>
+            </CardContent>
+          </Card>
         </section>
 
         <section className="space-y-6">
           <h2 className="text-2xl font-semibold">Key Metrics</h2>
           <MetricsOverview />
         </section>
-
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">Content Status Overview</h2>
-            <Button variant="outline">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Note
-            </Button>
-          </div>
-          <CourseStatusSection />
-        </section>
       </main>
     </div>
   );
 }
+
+    
