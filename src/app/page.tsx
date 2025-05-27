@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { LoginDialog } from '@/components/auth/LoginDialog';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { updateUserLastActive } from '@/app/actions/authActions';
+import OpmImage from './opm.png'; // Import the local image
 
 
 const homePageTasksData = [
@@ -173,12 +174,13 @@ export default function DashboardRedesignPage() {
             </div>
             <div className="w-full md:w-1/3 lg:w-1/4 xl:w-1/5">
               <Image
-                src="https://placehold.co/600x400.png"
-                alt="Abstract team collaboration graphic"
+                src={OpmImage}
+                alt="OpennMind Application Logo"
                 width={600}
                 height={400}
                 className="rounded-lg object-cover"
-                data-ai-hint="abstract network play button"
+                data-ai-hint="application logo abstract"
+                priority // Add priority if this is a critical LCP image
               />
             </div>
           </section>
