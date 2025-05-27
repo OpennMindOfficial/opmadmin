@@ -4,20 +4,23 @@
 
 const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
-const BASEROW_TEAM_TABLE_ID = '551777'; 
+const BASEROW_TEAM_TABLE_ID = '552726'; // Updated to new user table ID
 const BASEROW_CEO_TABLE_ID = '552544';
-const BASEROW_SUBJECT_NOTES_TABLE_ID = '551357'; // Updated table ID
+const BASEROW_SUBJECT_NOTES_TABLE_ID = '551357';
 
 export interface UserRecord {
-  id: number;
+  id: number; // Baserow's internal row ID
   order: string;
-  Name?: string;
+  Name?: string; // Full Name
   Email: string;
   Password?: string; 
   'First signin'?: string; 
   'Last active'?: string; 
   'First time'?: 'YES' | 'NO';
   Role?: string; 
+  DOB?: string; // Date of Birth as string (YYYY-MM-DD)
+  Class?: string; // e.g., "Class 10"
+  AuthMethod?: string; // e.g., 'email', 'firebasegoogle'
   [key: string]: any; 
 }
 
@@ -37,7 +40,7 @@ export interface SubjectNoteRecord {
   Subject?: string;
   Chapter?: string;
   Notes?: string;
-  ID?: number | string; // The custom ID field the user added for their reference
+  ID?: number | string; 
   [key: string]: any;
 }
 
@@ -68,7 +71,7 @@ async function makeBaserowRequest(
     const response = await fetch(url, options);
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to parse error JSON.' }));
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to parse error JSON from Baserow.' }));
       console.error('Baserow API Error:', { status: response.status, statusText: response.statusText, errorData, url, method, requestBody: body ? JSON.stringify(body) : 'No Body' });
       throw new Error(errorData.detail || `Baserow API request failed: ${response.status} ${response.statusText}`);
     }
@@ -88,7 +91,7 @@ async function makeBaserowRequest(
   }
 }
 
-// Team User Functions
+// Team User Functions (now primary user functions)
 export async function getUserByEmail(email: string): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
   try {
@@ -98,25 +101,42 @@ export async function getUserByEmail(email: string): Promise<UserRecord | null> 
     }
     return null;
   } catch (error) {
-    console.error(`Failed to fetch user by email ${email} from team table:`, error);
+    console.error(`Failed to fetch user by email ${email} from table ${BASEROW_TEAM_TABLE_ID}:`, error);
     return null;
   }
 }
 
+export async function getUserById(rowId: number): Promise<UserRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/${rowId}/?user_field_names=true`;
+   try {
+    const data = await makeBaserowRequest(endpoint, 'GET');
+    return data as UserRecord;
+  } catch (error) {
+    console.error(`Failed to fetch user by ID ${rowId} from table ${BASEROW_TEAM_TABLE_ID}:`, error);
+    return null;
+  }
+}
+
+
 export async function updateUser(rowId: number, updates: Partial<UserRecord>): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/${rowId}/?user_field_names=true`;
   const fieldsToUpdate: { [key: string]: any } = {};
+  // Filter out id and order from updates, as Baserow handles these automatically or they are part of the URL.
   for (const key in updates) {
     if (key !== 'id' && key !== 'order' && Object.prototype.hasOwnProperty.call(updates, key)) {
       fieldsToUpdate[key] = (updates as any)[key];
     }
   }
+  console.log(`[BaserowService] Attempting to update user ${rowId} in table ${BASEROW_TEAM_TABLE_ID} with fields:`, JSON.stringify(fieldsToUpdate));
+
 
   try {
-    return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
+    const updatedUser = await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
+    console.log('[BaserowService] Update user response:', updatedUser);
+    return updatedUser;
   } catch (error) {
-    console.error(`Failed to update user ${rowId} in team table:`, error);
-    return null;
+    console.error(`Failed to update user ${rowId} in table ${BASEROW_TEAM_TABLE_ID}:`, error);
+    throw error; // Re-throw to be caught by server action
   }
 }
 
@@ -126,7 +146,7 @@ export async function getAllUsers(): Promise<UserRecord[]> {
     const data = await makeBaserowRequest(endpoint, 'GET');
     return (data?.results || []) as UserRecord[];
   } catch (error) {
-    console.error('Failed to fetch all users from team table:', error);
+    console.error(`Failed to fetch all users from table ${BASEROW_TEAM_TABLE_ID}:`, error);
     return [];
   }
 }
@@ -185,8 +205,8 @@ export async function createSubjectNote(noteData: { Subject?: string; Chapter?: 
 }
 
 export async function updateSubjectNote(
-  rowId: number, // This is the system ID of the row
-  updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'ID'>> // We don't update the system id, order, or the custom ID field via this.
+  rowId: number, 
+  updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'ID'>> 
 ): Promise<SubjectNoteRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/?user_field_names=true`;
   console.log(`--- Service: updateSubjectNote ---`);

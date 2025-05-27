@@ -10,17 +10,21 @@ import {
   type UserRecord,
   getCeoByEmail,
   updateCeoRecord,
-  type CeoUserRecord
+  type CeoUserRecord,
+  getUserById,
 } from '@/services/baserowService';
+import { format } from 'date-fns';
 
 interface LoginResult {
   success: boolean;
   error?: string;
-  firstTimeLogin?: boolean; // Only for team members
+  firstTimeLogin?: boolean; 
+  userId?: number; // Baserow row ID
   userEmail?: string;
   userName?: string;
-  userRole?: string; // Only for team members
-  isCeo?: boolean; // To identify CEO login
+  userRole?: string; 
+  isCeo?: boolean; 
+  authMethod?: string;
 }
 
 export async function verifyLogin(email: string, plainPassword_providedByUser: string): Promise<LoginResult> {
@@ -32,7 +36,7 @@ export async function verifyLogin(email: string, plainPassword_providedByUser: s
     }
 
     if (!user.Password) {
-      console.error(`User ${email} found but has no password set in Baserow team table.`);
+      console.error(`User ${email} found but has no password set in Baserow table.`);
       return { success: false, error: 'Authentication error. Please contact support.' };
     }
     
@@ -49,12 +53,18 @@ export async function verifyLogin(email: string, plainPassword_providedByUser: s
 
     if (!isFirstTime) {
       await updateUser(user.id, { 'Last active': nowISO });
-      return { success: true, firstTimeLogin: false, userEmail: user.Email, userName, userRole, isCeo: false };
-    } else {
-      // For first-time login, 'Last active' will be updated after password change if needed,
-      // or on subsequent logins. 'First signin' is handled during password change.
-      return { success: true, firstTimeLogin: true, userEmail: user.Email, userName, userRole, isCeo: false };
     }
+    // For first-time login, 'Last active' will be updated after password change or on subsequent logins.
+    return { 
+        success: true, 
+        firstTimeLogin: isFirstTime, 
+        userId: user.id,
+        userEmail: user.Email, 
+        userName, 
+        userRole, 
+        isCeo: false,
+        authMethod: user.AuthMethod || 'email'
+    };
   } catch (error: any) {
     console.error('Team login verification error:', error);
     return { success: false, error: error.message || 'An unexpected error occurred during login.' };
@@ -84,7 +94,14 @@ export async function verifyCeoLogin(email: string, plainPassword_providedByUser
     await updateCeoRecord(ceo.id, { 'Last active': nowISO });
     const userName = ceo.Name || 'CEO';
 
-    return { success: true, userEmail: ceo.Email, userName, isCeo: true };
+    return { 
+        success: true,
+        userId: ceo.id, 
+        userEmail: ceo.Email, 
+        userName, 
+        isCeo: true,
+        authMethod: 'email' // Assuming CEO always uses email/password
+    };
   } catch (error: any) {
     console.error('CEO login verification error:', error);
     return { success: false, error: error.message || 'An unexpected error occurred during CEO login.' };
@@ -97,9 +114,10 @@ interface ChangePasswordResult {
   error?: string;
 }
 
-export async function changePassword(email: string, newPassword_plaintext: string): Promise<ChangePasswordResult> {
+export async function changePassword(userId: number, newPassword_plaintext: string): Promise<ChangePasswordResult> {
   try {
-    const user = await getUserByEmail(email); // This is for team members
+    // User ID is now the Baserow row ID
+    const user = await getUserById(userId); 
     if (!user) {
       return { success: false, error: 'User not found.' };
     }
@@ -114,7 +132,7 @@ export async function changePassword(email: string, newPassword_plaintext: strin
       'Last active': nowISO, 
     });
 
-    if (updatedUser === undefined && !user) { 
+    if (!updatedUser) { 
         return { success: false, error: 'Failed to update password. Please try again.' };
     }
 
@@ -125,30 +143,81 @@ export async function changePassword(email: string, newPassword_plaintext: strin
   }
 }
 
-export async function updateUserLastActive(email: string): Promise<{ success: boolean; error?: string, userName?: string, userRole?: string }> {
+// Server action to change password using current password for verification
+interface ChangePasswordWithVerificationResult {
+  success: boolean;
+  error?: string;
+}
+export async function changePasswordWithVerification(
+  userId: number,
+  currentPassword_plaintext: string,
+  newPassword_plaintext: string
+): Promise<ChangePasswordWithVerificationResult> {
   try {
-    // This function is specifically for team members, CEO "last active" is updated during CEO login.
-    const user = await getUserByEmail(email);
+    const user = await getUserById(userId);
     if (!user) {
-      console.warn(`updateUserLastActive: User not found for email ${email}.`);
+      return { success: false, error: 'User not found.' };
+    }
+    if (!user.Password) {
+      return { success: false, error: 'User password not set. Contact support.' };
+    }
+
+    const currentPasswordMatches = await bcrypt.compare(currentPassword_plaintext, user.Password);
+    if (!currentPasswordMatches) {
+      return { success: false, error: 'Current password does not match.' };
+    }
+
+    if (newPassword_plaintext.length < 8) {
+      return { success: false, error: 'New password must be at least 8 characters.' };
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword_plaintext, 10);
+    const nowISO = new Date().toISOString();
+
+    const updatedUser = await updateUser(user.id, {
+      Password: hashedNewPassword,
+      'Last active': nowISO,
+      // 'First time' should already be 'NO' if they are changing password this way
+    });
+
+    if (!updatedUser) {
+      return { success: false, error: 'Failed to update password. Please try again.' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error('Password change with verification error:', error);
+    return { success: false, error: error.message || 'An unexpected error occurred.' };
+  }
+}
+
+
+export async function updateUserLastActive(userId: number): Promise<{ success: boolean; error?: string, userName?: string, userRole?: string }> {
+  try {
+    const user = await getUserById(userId);
+    if (!user) {
+      console.warn(`updateUserLastActive: User not found for ID ${userId}.`);
       return { success: false, error: 'User not found for last active update.' };
     }
 
     const nowISO = new Date().toISOString();
-    await updateUser(user.id, { 'Last active': nowISO });
+    const updatedUser = await updateUser(user.id, { 'Last active': nowISO });
     
-    if (user === undefined) {
+    if (!updatedUser) {
          return { success: false, error: 'Failed to update last active time.' };
     }
 
     return { success: true, userName: user.Name || '', userRole: user.Role || 'Member' };
   } catch (error: any) {
-    console.error(`Error updating last active time for ${email}:`, error);
+    console.error(`Error updating last active time for user ID ${userId}:`, error);
     return { success: false, error: 'An unexpected error occurred while updating last active time.' };
   }
 }
 
-interface AccountDetails extends Omit<UserRecord, 'Password' | 'order' | 'id'> {}
+export interface AccountDetails extends Omit<UserRecord, 'Password' | 'order' | 'id'> {
+  id?: number; // Keep id for client-side reference
+  firstName?: string;
+  lastName?: string;
+}
 
 interface FetchAccountDetailsResult {
   success: boolean;
@@ -156,47 +225,104 @@ interface FetchAccountDetailsResult {
   details?: AccountDetails;
 }
 
-export async function fetchAccountDetails(email: string): Promise<FetchAccountDetailsResult> {
+export async function fetchAccountDetails(userId: number | null, userEmail?: string | null ): Promise<FetchAccountDetailsResult> {
   try {
-    const user = await getUserByEmail(email);
+    let user: UserRecord | null = null;
+    if (userId) {
+      user = await getUserById(userId);
+    } else if (userEmail) {
+      user = await getUserByEmail(userEmail);
+    }
+
     if (!user) {
       return { success: false, error: 'User not found.' };
     }
-    const { Password, order, id, ...details } = user;
-    return { success: true, details };
+    const { Password, order, id, Name, ...otherDetails } = user;
+    
+    let firstName = '';
+    let lastName = '';
+    if (Name) {
+      const nameParts = Name.split(' ');
+      firstName = nameParts[0];
+      lastName = nameParts.slice(1).join(' ');
+    }
+
+    return { 
+        success: true, 
+        details: { 
+            ...otherDetails, 
+            id, // include the original Baserow row ID
+            firstName, 
+            lastName,
+            Email: user.Email, // ensure email is present
+            AuthMethod: user.AuthMethod || 'email',
+            DOB: user.DOB,
+            Class: user.Class,
+        } 
+    };
   } catch (error: any) {
-    console.error(`Error fetching account details for ${email}:`, error);
+    console.error(`Error fetching account details:`, error);
     return { success: false, error: 'Failed to fetch account details.' };
   }
 }
 
-interface UpdateNameResult {
-  success: boolean;
-  error?: string;
-  updatedName?: string;
+interface UpdateProfilePayload {
+    name?: string;
+    email?: string;
+    dob?: string;
+    selectedClass?: string; // Baserow field name is 'Class'
+    authMethod?: string; // Not directly updated, but used for logic
 }
 
-export async function updateUserName(email: string, newName: string): Promise<UpdateNameResult> {
+interface UpdateProfileResult {
+  success: boolean;
+  error?: string;
+  updatedUser?: UserRecord;
+}
+
+export async function updateUserProfile(userId: number, payload: UpdateProfilePayload): Promise<UpdateProfileResult> {
+  console.log(`[AuthActions] updateUserProfile called for userId: ${userId} with payload:`, payload);
   try {
-    const user = await getUserByEmail(email); // Assumes this is for team members
-    if (!user) {
+    const userToUpdate = await getUserById(userId);
+    if (!userToUpdate) {
       return { success: false, error: 'User not found.' };
     }
-    if (!newName.trim()) {
-      return { success: false, error: 'Name cannot be empty.' };
+
+    const updates: Partial<UserRecord> = {};
+    if (payload.name) updates.Name = payload.name;
+    if (payload.dob) updates.DOB = payload.dob;
+    // if (payload.selectedClass) updates.Class = payload.selectedClass; // Class update disabled in example
+
+    // Handle email update only if authMethod is 'email' and email has changed
+    if (payload.email && userToUpdate.AuthMethod === 'email' && payload.email.toLowerCase() !== userToUpdate.Email.toLowerCase()) {
+        // Check if new email already exists
+        const existingUserWithNewEmail = await getUserByEmail(payload.email);
+        if (existingUserWithNewEmail && existingUserWithNewEmail.id !== userId) {
+            return { success: false, error: 'This email is already associated with another account.' };
+        }
+        updates.Email = payload.email;
     }
-    const updatedUser = await updateUser(user.id, { Name: newName });
     
-    if (updatedUser === undefined && !user) {
-        return { success: false, error: 'Failed to update name.' };
+    if (Object.keys(updates).length === 0) {
+      return { success: true, updatedUser: userToUpdate, error: "No changes to update." }; // No actual DB call needed
+    }
+
+    const updatedUser = await updateUser(userId, updates);
+    
+    if (!updatedUser) {
+        return { success: false, error: 'Failed to update profile.' };
     }
     
-    return { success: true, updatedName: newName };
+    return { success: true, updatedUser };
   } catch (error: any) {
-    console.error(`Error updating name for ${email}:`, error);
-    return { success: false, error: 'Failed to update name.' };
+    console.error(`Error updating profile for userId ${userId}:`, error);
+    if (error.message.includes("already associated")) { // Specific error from Baserow check
+        return { success: false, error: error.message };
+    }
+    return { success: false, error: 'An unexpected error occurred while updating profile.' };
   }
 }
+
 
 export interface TeamMemberInfo {
   id: number;
