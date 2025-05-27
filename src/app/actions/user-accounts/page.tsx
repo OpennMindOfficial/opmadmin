@@ -56,6 +56,7 @@ export default function UserAccountsPage() {
     } else {
          setShowAuthDialog(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   useEffect(() => {
@@ -96,13 +97,13 @@ export default function UserAccountsPage() {
       const result = await verifyPagePasswordAction(password);
 
       if (result.success) {
-        await logAccessAttemptAction({ ...logBase, Result: 'Success', Reason: 'NULL' });
+        await logAccessAttemptAction({ ...logBase, Result: 'Success', Reason: 'NULL (User Accounts Access)' });
         setIsAuthenticated(true);
         setShowAuthDialog(false);
         setAttempts(0);
         fetchUserData();
       } else {
-        await logAccessAttemptAction({ ...logBase, Result: 'Failure', Reason: result.error || 'Incorrect Password' });
+        await logAccessAttemptAction({ ...logBase, Result: 'Failure', Reason: `${result.error || 'Incorrect Password'} (User Accounts Access)` });
         setAuthError(result.error || "Incorrect password.");
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
@@ -111,14 +112,14 @@ export default function UserAccountsPage() {
           localStorage.setItem(PAGE_LOCKOUT_KEY, oneHourLockout.toString());
           setIsLocked(true);
           setLockoutTime(oneHourLockout);
-          const lockoutReason = "Account Locked (Max Attempts Reached)";
-          setAuthError(lockoutReason); // This will be updated by the useEffect timer
+          const lockoutReason = "Account Locked (Max Attempts Reached - User Accounts)";
+          setAuthError(lockoutReason); 
           await logAccessAttemptAction({ ...logBase, Result: 'Failure', Reason: lockoutReason });
         }
       }
     } catch (e: any) { 
       setAuthError(e.message);
-      await logAccessAttemptAction({ ...logBase, Result: 'Failure', Reason: e.message || 'Exception during verification' });
+      await logAccessAttemptAction({ ...logBase, Result: 'Failure', Reason: `${e.message || 'Exception'} (User Accounts Access)` });
     } finally { 
       setIsLoadingAuth(false); 
     }
@@ -132,6 +133,12 @@ export default function UserAccountsPage() {
       else { setDataError(result.error || "Failed to load user data."); }
     } catch (e: any) { setDataError(e.message);
     } finally { setIsLoadingData(false); }
+  };
+  
+  const handleEditUser = (user: UserRecord) => {
+    // Placeholder for actual edit dialog logic
+    alert(`CEO action: Edit user ${user.Name} (ID: ${user.id})`);
+    // Here you would typically open an edit dialog and pass the user data.
   };
 
 
@@ -225,7 +232,18 @@ export default function UserAccountsPage() {
                                   {field === 'Password' ? '••••••••' : (user[field] !== undefined && user[field] !== null ? String(user[field]) : 'N/A')}
                                 </TableCell>
                               ))}
-                              {isCeo && <TableCell><Button variant="outline" size="sm" disabled>Edit (CEO)</Button></TableCell>}
+                              {isCeo && (
+                                <TableCell>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    disabled={!isCeo} 
+                                    onClick={() => handleEditUser(user)}
+                                  >
+                                    Edit
+                                  </Button>
+                                </TableCell>
+                              )}
                             </TableRow>
                           ))
                         )}

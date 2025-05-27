@@ -51,6 +51,7 @@ export default function ProUsersPage() {
     } else {
         setShowAuthDialog(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -113,6 +114,12 @@ export default function ProUsersPage() {
       else { setDataError(result.error || "Failed to load Pro User data."); }
     } catch (e: any) { setDataError(e.message);
     } finally { setIsLoadingData(false); }
+  };
+  
+  const handleEditProUser = (user: ProUserSpecificRecord) => {
+    // Placeholder for actual edit dialog logic
+    alert(`CEO action: Edit pro user ${user.Name} (ID: ${user.id})`);
+    // Here you would typically open an edit dialog and pass the user data.
   };
 
   if (!isAuthenticated) {
@@ -206,7 +213,18 @@ export default function ProUsersPage() {
                                   {field === 'Password' ? '••••••••' : (user[field] !== undefined && user[field] !== null ? String(user[field]) : 'N/A')}
                                 </TableCell>
                               ))}
-                              {isCeo && <TableCell><Button variant="outline" size="sm" disabled>Edit (CEO)</Button></TableCell>}
+                              {isCeo && (
+                                <TableCell>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    disabled={!isCeo} 
+                                    onClick={() => handleEditProUser(user)}
+                                  >
+                                    Edit
+                                  </Button>
+                                </TableCell>
+                              )}
                             </TableRow>
                           ))
                         )}
