@@ -27,6 +27,7 @@ const navItems: NavItem[] = [
   { href: '/tasks', label: 'Tasks', count: 1, exact: true },
   { href: '/activity', label: 'Activity', exact: true },
   { href: '/functioning', label: 'Functioning', exact: true },
+  { href: '/code-changes', label: 'Code Changes', exact: true }, // Added here
 ];
 
 export function NewTopNav() {
@@ -71,7 +72,7 @@ export function NewTopNav() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild><Link href="/about-build">About This App</Link></DropdownMenuItem>
-              <DropdownMenuItem asChild><Link href="/code-changes">Code Changes</Link></DropdownMenuItem>
+              {/* Removed "Code Changes" from here */}
               <DropdownMenuSeparator />
               <DropdownMenuItem>Account Settings</DropdownMenuItem>
               <DropdownMenuItem>Team Settings</DropdownMenuItem>
