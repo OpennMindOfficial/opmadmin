@@ -97,52 +97,52 @@ interface EditNoteResult {
 
 export async function editSubjectNoteAction(
   noteId: number,
-  newData: { subject: string; chapter: string; notes: string } // This comes directly from the form
+  newData: { subject: string; chapter: string; notes: string }
 ): Promise<EditNoteResult> {
   console.log('--- Starting editSubjectNoteAction ---');
-  console.log('Received noteId for edit:', noteId);
+  console.log('Attempting to edit note with noteId (system ID):', noteId); // Log the noteId being used
   console.log('Received newData for edit (from client form):', JSON.stringify(newData, null, 2));
 
   try {
-    const payloadForBaserow = {
+    const payloadToUpdate = {
       Subject: newData.subject,
       Chapter: newData.chapter,
       Notes: newData.notes,
     };
 
-    console.log('Payload constructed for Baserow update:', JSON.stringify(payloadForBaserow, null, 2));
+    console.log('Payload constructed for Baserow update:', JSON.stringify(payloadToUpdate, null, 2));
 
-    const updatedNoteFromService = await updateSubjectNote(noteId, payloadForBaserow);
+    const updatedNoteFromService = await updateSubjectNote(noteId, payloadToUpdate);
     console.log('Response from updateSubjectNote service:', JSON.stringify(updatedNoteFromService, null, 2));
 
     if (!updatedNoteFromService) {
       console.error(`Failed to update note ${noteId}. updateSubjectNote service returned null or undefined.`);
       return { success: false, error: 'Failed to update note. Baserow service did not return updated data.' };
     }
-
+    
     if (typeof updatedNoteFromService.id !== 'number') {
         console.error(`Baserow update response for note ${noteId} was invalid (e.g., missing ID or not a row object). Response:`, JSON.stringify(updatedNoteFromService, null, 2));
         return { success: false, error: 'Baserow update response was invalid. Data might not have been saved.' };
     }
     
-    // Check if the data returned matches what we tried to send (less strict, just for logging)
+    // Check if the data returned actually matches what we tried to send
+    // This is a softer check than before, primarily for logging.
     const dataMatched = 
-        updatedNoteFromService.Subject === payloadForBaserow.Subject &&
-        updatedNoteFromService.Chapter === payloadForBaserow.Chapter &&
-        updatedNoteFromService.Notes === payloadForBaserow.Notes;
+        updatedNoteFromService.Subject === payloadToUpdate.Subject &&
+        updatedNoteFromService.Chapter === payloadToUpdate.Chapter &&
+        updatedNoteFromService.Notes === payloadToUpdate.Notes;
 
     if (!dataMatched) {
-        console.warn(`POTENTIAL DATA MISMATCH: Baserow update for note ${noteId} returned data that does not exactly match the sent payload. This is a warning.`);
-        console.warn(`Sent Payload: ${JSON.stringify(payloadForBaserow)}`);
+        console.warn(`POTENTIAL DATA MISMATCH or Baserow quirk: Baserow update for note ${noteId} returned data that does not exactly match the sent payload. This is a warning. The update might have occurred but Baserow's response might differ slightly (e.g. field order, last_modified timestamps not included in our check). Or, Baserow might not have applied all changes for a specific field.`);
+        console.warn(`Sent Payload: ${JSON.stringify(payloadToUpdate)}`);
         console.warn(`Received Data: ${JSON.stringify(updatedNoteFromService)}`);
-        // We are proceeding as if successful for the UI, but this indicates a potential issue.
+        // For now, we will proceed as if successful for the UI, but this indicates a potential issue to investigate if data isn't visually updating.
     }
 
     revalidatePath('/actions/create-subject-notes');
     console.log(`editSubjectNoteAction successful for noteId ${noteId}. Path /actions/create-subject-notes revalidated.`);
     console.log('--- Ending editSubjectNoteAction (Success) ---');
-    // Return the note data received from Baserow, even if it didn't match perfectly (as per user request to reduce strictness)
-    return { success: true, note: updatedNoteFromService };
+    return { success: true, note: updatedNoteFromService }; // Return the note data received from Baserow
 
   } catch (error: any) {
     console.error(`Critical error in editSubjectNoteAction for note ${noteId}:`, error.message, error.stack);
