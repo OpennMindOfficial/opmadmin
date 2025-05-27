@@ -5,8 +5,8 @@
 const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
 
-// Table ID for team/user login and general user data
-const BASEROW_TEAM_TABLE_ID = '551777'; 
+// Table ID for team/user login and general user data (now Account Settings table)
+const BASEROW_TEAM_TABLE_ID = '552726'; 
 
 // Table ID for CEO specific login
 const BASEROW_CEO_TABLE_ID = '552544';
@@ -22,6 +22,10 @@ const BASEROW_ABOUT_US_TABLE_ID = '542795';
 // Table IDs for Secure Page Access
 const BASEROW_PAGE_PASSWORD_TABLE_ID = '552919';
 const BASEROW_ACCESS_LOG_TABLE_ID = '552920';
+
+// Table IDs for Performance Tracking
+const BASEROW_PERFORMANCE_USER_MAIN_TABLE_ID = '546405';
+const BASEROW_PERFORMANCE_SUBJECT_TABLE_ID = '546409';
 
 
 export interface UserRecord {
@@ -109,6 +113,36 @@ export interface AccessLogRecord {
     [key: string]: any;
 }
 
+// Interfaces for Performance Tracking
+export interface PerformanceUserMainDataRecord {
+  id: number;
+  order: string;
+  Name?: string;
+  Email?: string;
+  'Total Study Hours'?: number;
+  'Goal Completion'?: string;
+  'Active days streak'?: number;
+  'Lessons Completed'?: number;
+  'Avg Study Session'?: string;
+  'Completion Rate'?: string;
+  'Notes Taken'?: number;
+  'Retention Rate'?: string;
+  'Daily Study'?: string;
+  [key: string]: any;
+}
+
+export interface PerformanceSubjectDataRecord {
+  id: number;
+  order: string;
+  Name?: string;
+  Email?: string;
+  Subjects?: string;
+  Hours?: string;
+  'Goal Progress'?: string;
+  'Last Active'?: string;
+  [key: string]: any;
+}
+
 
 async function makeBaserowRequest(
   endpoint: string,
@@ -124,7 +158,7 @@ async function makeBaserowRequest(
   const options: RequestInit = {
     method,
     headers,
-    cache: 'no-store', 
+    cache: 'no-store', // Important for ensuring fresh data, especially after mutations
   };
 
   if (body && (method === 'POST' || method === 'PATCH')) {
@@ -368,10 +402,6 @@ export async function updateAboutUsData(rowId: number = 1, contentData: Pick<Abo
 // --- Service Functions for Secure Page Access ---
 export async function fetchFirstPagePassword(identifier?: string): Promise<PagePasswordRecord | null> {
   let endpoint = `/api/database/rows/table/${BASEROW_PAGE_PASSWORD_TABLE_ID}/?user_field_names=true&size=1`;
-  // If you add an 'Identifier' field to table 552919 to distinguish passwords, you'd filter by it:
-  // if (identifier) {
-  //   endpoint = `/api/database/rows/table/${BASEROW_PAGE_PASSWORD_TABLE_ID}/?user_field_names=true&filter__Identifier__equal=${encodeURIComponent(identifier)}&size=1`;
-  // }
   try {
     const data = await makeBaserowRequest(endpoint);
     if (data && data.results && data.results.length > 0) {
@@ -388,7 +418,6 @@ export async function fetchFirstPagePassword(identifier?: string): Promise<PageP
 export async function createAccessLogEntry(logData: Partial<AccessLogRecord>): Promise<AccessLogRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_ACCESS_LOG_TABLE_ID}/?user_field_names=true`;
   try {
-    // Ensure all required fields for Baserow are present, or make them optional in Baserow
     const payload = {
         Name: logData.Name || 'N/A',
         Email: logData.Email || 'N/A',
@@ -404,7 +433,6 @@ export async function createAccessLogEntry(logData: Partial<AccessLogRecord>): P
 }
 
 // --- Service Functions for Protected Data (User Accounts, Pro Users) ---
-// Assuming table 542785 is User Accounts Data
 const BASEROW_USER_ACCOUNTS_DATA_TABLE_ID = '542785';
 export async function fetchUserAccountData(): Promise<UserRecord[]> {
     const endpoint = `/api/database/rows/table/${BASEROW_USER_ACCOUNTS_DATA_TABLE_ID}/?user_field_names=true&size=200`;
@@ -417,10 +445,8 @@ export async function fetchUserAccountData(): Promise<UserRecord[]> {
     }
 }
 
-// Assuming table 552928 is Pro Users Data
 const BASEROW_PRO_USERS_DATA_TABLE_ID = '552928';
-// Define ProUserRecord interface if fields differ significantly from UserRecord
-export interface ProUserSpecificRecord extends UserRecord { // Example, extend or make specific
+export interface ProUserSpecificRecord extends UserRecord { 
     DatePurchased?: string;
     DateExpiring?: string;
     Cost?: number;
@@ -435,4 +461,16 @@ export async function fetchProUsersData(): Promise<ProUserSpecificRecord[]> {
         console.error(`[BaserowService] Failed to fetch pro users data from table ${BASEROW_PRO_USERS_DATA_TABLE_ID}:`, error);
         return [];
     }
+}
+
+// --- Service Function for Performance Tracking Data ---
+export async function fetchPerformanceTableData(tableId: string): Promise<Array<PerformanceUserMainDataRecord | PerformanceSubjectDataRecord>> {
+  const endpoint = `/api/database/rows/table/${tableId}/?user_field_names=true&size=200`; // size=200 is a Baserow default max per page
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return (data?.results || []) as Array<PerformanceUserMainDataRecord | PerformanceSubjectDataRecord>;
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch performance data from table ${tableId}:`, error);
+    return [];
+  }
 }

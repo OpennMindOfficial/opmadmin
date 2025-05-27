@@ -8,9 +8,12 @@ import {
   fetchAllBugReports,
   fetchAboutUsData,
   updateAboutUsData,
+  fetchPerformanceTableData, // New import
   type AddSubjectBaserowRecord,
   type BugReportBaserowRecord,
   type AboutUsBaserowRecord,
+  type PerformanceUserMainDataRecord, // New import
+  type PerformanceSubjectDataRecord, // New import
 } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
 
@@ -111,4 +114,20 @@ export async function updateAboutUsContentAction(
   }
 }
 
+// --- Performance Tracking Actions ---
+interface GetPerformanceDataResult {
+  success: boolean;
+  data?: Array<PerformanceUserMainDataRecord | PerformanceSubjectDataRecord>;
+  error?: string;
+}
+
+export async function getPerformanceDataAction(tableId: string): Promise<GetPerformanceDataResult> {
+  try {
+    const data = await fetchPerformanceTableData(tableId);
+    return { success: true, data };
+  } catch (error: any) {
+    console.error(`Error in getPerformanceDataAction for table ${tableId}:`, error);
+    return { success: false, error: error.message || `Failed to fetch performance data for table ${tableId}.` };
+  }
+}
     

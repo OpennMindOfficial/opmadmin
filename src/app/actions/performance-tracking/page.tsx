@@ -8,12 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BarChart3 as PageIcon, Loader2, AlertTriangle, Database } from 'lucide-react';
-// TODO: Implement Server Actions and Baserow Service for Performance Data
-// import { getPerformanceDataAction, type PerformanceDataRecord } from '@/app/actions/performanceActions'; // Placeholder
+import { getPerformanceDataAction } from '@/app/actions/managementActions';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 
-// Placeholder type - replace with actual from performanceActions
+// This interface can be used by the page state, fields are optional as they vary between tables
 interface PerformanceDataRecord {
   id: number;
   order: string;
@@ -56,57 +55,19 @@ export default function PerformanceTrackingPage() {
   const [selectedTable, setSelectedTable] = useState<string>(TABLE_USER_MAIN_DATA_ID);
   const [currentFields, setCurrentFields] = useState<string[]>(userMainDataFields);
 
-  // --- MOCK DATA & FUNCTIONS (Remove when actual actions are ready) ---
-   const generateMockData = (tableId: string): PerformanceDataRecord[] => {
-    if (tableId === TABLE_USER_MAIN_DATA_ID) {
-      return Array.from({ length: 10 }, (_, i) => ({
-        id: i + 1,
-        order: (i + 1).toString(),
-        Name: `User ${i + 1}`,
-        Email: `user${i + 1}@example.com`,
-        'Total Study Hours': Math.floor(Math.random() * 200),
-        'Goal Completion': `${Math.floor(Math.random() * 100)}%`,
-        'Active days streak': Math.floor(Math.random() * 50),
-        'Lessons Completed': Math.floor(Math.random() * 100),
-        'Avg Study Session': `${Math.floor(Math.random() * 60) + 15} min`,
-        'Completion Rate': `${Math.floor(Math.random() * 100)}%`,
-        'Notes Taken': Math.floor(Math.random() * 200),
-        'Retention Rate': `${Math.floor(Math.random() * 100)}%`,
-        'Daily Study': `${(Math.random() * 3).toFixed(1)} hr`,
-      }));
-    } else if (tableId === TABLE_SUBJECT_DATA_ID) {
-      return Array.from({ length: 10 }, (_, i) => ({
-        id: i + 1,
-        order: (i + 1).toString(),
-        Name: `User ${i + 1}`,
-        Email: `user${i + 1}@example.com`,
-        Subjects: 'Math,Science,History',
-        Hours: '10,15,5',
-        'Goal Progress': '80%,90%,70%',
-        'Last Active': '2024-07-15,2024-07-14,2024-07-16',
-      }));
-    }
-    return [];
-  };
-  const mockGetPerformanceDataAction = async (sourceTableId: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
-    return { success: true, data: generateMockData(sourceTableId) };
-  };
-  // --- END MOCK DATA & FUNCTIONS ---
-
 
   const fetchData = async (tableId: string) => {
     setIsLoading(true);
     setError(null);
     setCurrentFields(tableId === TABLE_USER_MAIN_DATA_ID ? userMainDataFields : subjectDataFields);
     try {
-      // Replace with actual action: const result = await getPerformanceDataAction(tableId);
-      const result = await mockGetPerformanceDataAction(tableId);
+      const result = await getPerformanceDataAction(tableId);
       if (result.success && result.data) {
-        setData(result.data);
+        // Cast the fetched data to PerformanceDataRecord[]
+        setData(result.data as PerformanceDataRecord[]);
       } else {
-        setError("Failed to load performance data."); // result.error
-        toast({ variant: "destructive", title: "Error", description: "Failed to load performance data." });
+        setError(result.error || "Failed to load performance data.");
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to load performance data." });
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
@@ -187,7 +148,7 @@ export default function PerformanceTrackingPage() {
                       {data.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={currentFields.length} className="text-center text-muted-foreground py-10">
-                            No data found.
+                            No data found for this table.
                           </TableCell>
                         </TableRow>
                       ) : (
