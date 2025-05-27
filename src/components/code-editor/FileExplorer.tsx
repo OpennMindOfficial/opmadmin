@@ -2,6 +2,11 @@
 // src/components/code-editor/FileExplorer.tsx
 "use client";
 
+// This component is not used in the new Code Changes UI.
+// It can be deleted if not used elsewhere in the application.
+// For now, leaving its content to avoid breaking potential other usages,
+// but it's not part of the redesigned Code Changes page.
+
 import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Folder, File, ChevronDown, ChevronRight, FileText as FileTextIcon, FileJson, FileCode2, FileImage, Settings2 } from 'lucide-react';
@@ -45,7 +50,7 @@ const initialFileSystem: FileSystemNode[] = [
         ]
       },
       { id: 'env', name: 'env', type: 'folder', children: [] },
-      { id: '.secret', name: '.secret', type: 'folder', children: [] },
+      { id: 'secret', name: '.secret', type: 'folder', children: [] }, // Corrected id
       { id: 'package.json', name: 'package.json', type: 'file', icon: FileJson, extension: 'json'},
       { id: 'logo.png', name: 'logo.png', type: 'file', icon: FileImage, extension: 'png'},
     ]
@@ -57,12 +62,11 @@ const FileTypeIcon = ({ type, name, icon, isOpen }: { type: 'file' | 'folder', n
   if (SpecificIcon) return <SpecificIcon className="h-4 w-4 mr-2 text-muted-foreground" />;
   if (type === 'folder') return isOpen ? <ChevronDown className="h-4 w-4 mr-2 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 mr-2 text-muted-foreground" />;
   
-  // Default file icon if no specific icon provided
   return <File className="h-4 w-4 mr-2 text-muted-foreground" />;
 };
 
 const FileSystemItem: React.FC<{ node: FileSystemNode; level: number; onSelectFile: (id: string, name: string, type: 'file' | 'folder') => void; selectedFileId: string | null }> = ({ node, level, onSelectFile, selectedFileId }) => {
-  const [isOpen, setIsOpen] = useState(node.name === 'src' || node.name === 'fintech_webapp'); // Default open some folders
+  const [isOpen, setIsOpen] = useState(node.name === 'src' || node.name === 'fintech_webapp');
 
   const handleToggle = () => {
     if (node.type === 'folder') {
@@ -98,11 +102,10 @@ const FileSystemItem: React.FC<{ node: FileSystemNode; level: number; onSelectFi
 };
 
 export function FileExplorer() {
-  const [selectedFileId, setSelectedFileId] = useState<string | null>('index.tsx'); // Default selected file
+  const [selectedFileId, setSelectedFileId] = useState<string | null>('index.tsx'); 
 
   const handleSelectFile = (id: string, name: string, type: 'file' | 'folder') => {
     setSelectedFileId(id);
-    // Here you would typically also communicate to CodeEditorPane to open/focus this file
     console.log(`Selected: ${name} (type: ${type}, id: ${id})`);
   };
   
@@ -119,3 +122,5 @@ export function FileExplorer() {
     </div>
   );
 }
+
+    
