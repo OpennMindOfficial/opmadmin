@@ -5,10 +5,11 @@
 import { 
   fetchSubjectNotes, 
   createSubjectNote, 
-  deleteSubjectNote, // Kept for potential future use, but not used by edit
-  updateSubjectNote, // This will now be used by editSubjectNoteAction
+  deleteSubjectNote,
+  updateSubjectNote, 
   type SubjectNoteRecord 
 } from '@/services/baserowService';
+import { revalidatePath } from 'next/cache';
 
 interface GetNotesResult {
   success: boolean;
@@ -50,6 +51,10 @@ export async function addSubjectNoteAction(data: {
       console.error('Failed to create note in Baserow or received incomplete/invalid data. Response:', createdNote);
       return { success: false, error: 'Failed to create note in Baserow or received incomplete/invalid data.' };
     }
+    
+    // Revalidate path after adding a note
+    revalidatePath('/actions/create-subject-notes');
+
     return { success: true, note: createdNote };
   } catch (error: any) {
     console.error('Error in addSubjectNoteAction:', error);
@@ -62,13 +67,14 @@ interface DeleteNoteResult {
   error?: string;
 }
 
-// This action is no longer used by editSubjectNoteAction but kept for potential direct deletion features.
 export async function deleteSubjectNoteAction(id: number): Promise<DeleteNoteResult> {
   try {
     const success = await deleteSubjectNote(id);
     if (!success) {
       return { success: false, error: 'Failed to delete note from Baserow.' };
     }
+    // Revalidate path after deleting a note
+    revalidatePath('/actions/create-subject-notes');
     return { success: true };
   } catch (error: any) {
     console.error('Error in deleteSubjectNoteAction:', error);
@@ -83,13 +89,11 @@ interface EditNoteResult {
   error?: string;
 }
 
-// Reverted to direct update
 export async function editSubjectNoteAction(
   noteId: number,
   newData: { subject: string; chapter: string; notes: string }
 ): Promise<EditNoteResult> {
   try {
-    // Prepare the payload for Baserow. It expects field names as they are in Baserow.
     const payloadToUpdate = {
       Subject: newData.subject,
       Chapter: newData.chapter,
@@ -100,16 +104,16 @@ export async function editSubjectNoteAction(
 
     if (!updatedNote) {
       console.error(`Failed to update note ${noteId} in Baserow or received no data back. Baserow response:`, updatedNote);
-      return { success: false, error: 'Failed to update note. The operation might have succeeded silently or returned no content.' };
+      return { success: false, error: 'Failed to update note. Baserow did not return updated data.' };
     }
     
-    // Baserow PATCH should return the updated row with an ID.
-    // If updatedNote is null and the request was successful (204 No Content), this check will also fail.
-    // However, a 200 OK with the updated row is expected.
     if (typeof updatedNote.id !== 'number') {
         console.error(`Baserow update response for note ${noteId} did not include a valid note ID. Response:`, updatedNote);
-        return { success: false, error: 'Baserow update response was invalid.' };
+        return { success: false, error: 'Baserow update response was invalid (missing ID).' };
     }
+
+    // If update was successful, revalidate the path where notes are displayed
+    revalidatePath('/actions/create-subject-notes'); 
 
     return { success: true, note: updatedNote };
   } catch (error: any) {
