@@ -6,7 +6,7 @@ const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
 const BASEROW_TEAM_TABLE_ID = '551777'; 
 const BASEROW_CEO_TABLE_ID = '552544';
-const BASEROW_SUBJECT_NOTES_TABLE_ID = '551284';
+const BASEROW_SUBJECT_NOTES_TABLE_ID = '551357'; // Updated table ID
 
 export interface UserRecord {
   id: number;
@@ -183,3 +183,4 @@ export async function updateSubjectNote(rowId: number, updates: Partial<Omit<Sub
     return null;
   }
 }
+
