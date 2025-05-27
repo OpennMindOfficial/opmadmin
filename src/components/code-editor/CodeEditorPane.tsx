@@ -2,6 +2,7 @@
 // src/components/code-editor/CodeEditorPane.tsx
 "use client";
 
+import { useState } from 'react'; // Added import for useState
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X } from "lucide-react";
