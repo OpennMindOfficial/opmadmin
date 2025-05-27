@@ -13,14 +13,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RefreshCw } from 'lucide-react';
-import { verifyLogin } from '@/app/actions/authActions';
+import { RefreshCw, ArrowLeft } from 'lucide-react';
+import { verifyLogin, verifyCeoLogin } from '@/app/actions/authActions';
 
 interface LoginDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onLoginSuccess: (email: string, userName: string) => void; // Pass email and name up
-  onFirstTimeLogin: (email: string, userName: string) => void; // Pass email and name up
+  onLoginSuccess: (email: string, userName: string, isCeo?: boolean) => void;
+  onFirstTimeLogin: (email: string, userName: string) => void; 
 }
 
 const generateCaptcha = (length: number = 6): string => {
@@ -44,12 +44,21 @@ export function LoginDialog({
   const [captchaInput, setCaptchaInput] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCeoLoginView, setIsCeoLoginView] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setCaptchaCode(generateCaptcha());
       setCaptchaInput(''); 
       setError(''); 
+      // Reset view to team login if dialog reopens, unless specifically switched
+      // setIsCeoLoginView(false); // Removed to keep CEO view if user clicks away and back
+    } else {
+        // Reset fields when dialog closes
+        setEmail('');
+        setPassword('');
+        setCaptchaInput('');
+        // setIsCeoLoginView(false); // Keep this if you want it to always reset
     }
   }, [isOpen]); 
 
@@ -81,16 +90,27 @@ export function LoginDialog({
     
     setIsLoading(true);
     try {
-      const result = await verifyLogin(email, password);
+      let result;
+      if (isCeoLoginView) {
+        result = await verifyCeoLogin(email, password);
+      } else {
+        result = await verifyLogin(email, password);
+      }
+
       if (result.success && result.userEmail && result.userName !== undefined) {
-        if (result.firstTimeLogin) {
+        if (result.firstTimeLogin && !result.isCeo) { // First time login only for team members
           onOpenChange(false); 
           onFirstTimeLogin(result.userEmail, result.userName); 
         } else {
           localStorage.setItem('currentUserEmail', result.userEmail);
           localStorage.setItem('currentUserFullName', result.userName); 
+          if(result.isCeo) {
+            localStorage.setItem('isCeoLoggedIn', 'true');
+          } else {
+            localStorage.removeItem('isCeoLoggedIn'); // Ensure it's removed for team login
+          }
           onOpenChange(false); 
-          onLoginSuccess(result.userEmail, result.userName); 
+          onLoginSuccess(result.userEmail, result.userName, result.isCeo); 
         }
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');
@@ -103,14 +123,32 @@ export function LoginDialog({
       setIsLoading(false);
     }
   };
+
+  const switchToCeoLogin = () => {
+    setIsCeoLoginView(true);
+    setError('');
+    setEmail('');
+    setPassword('');
+    setCaptchaInput('');
+    handleRefreshCaptcha();
+  };
+
+  const switchToTeamLogin = () => {
+    setIsCeoLoginView(false);
+    setError('');
+    setEmail('');
+    setPassword('');
+    setCaptchaInput('');
+    handleRefreshCaptcha();
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Welcome Back!</DialogTitle>
+          <DialogTitle>{isCeoLoginView ? "CEO Sign In" : "Welcome Back!"}</DialogTitle>
           <DialogDescription>
-            Sign in to access your dashboard and manage your tasks.
+            {isCeoLoginView ? "Sign in to access CEO dashboard features." : "Sign in to access your team dashboard and manage your tasks."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -186,6 +224,15 @@ export function LoginDialog({
               </>
             ) : 'Sign In'}
           </Button>
+          {!isCeoLoginView ? (
+            <Button variant="link" onClick={switchToCeoLogin} className="text-sm" disabled={isLoading}>
+              CEO Login
+            </Button>
+          ) : (
+            <Button variant="link" onClick={switchToTeamLogin} className="text-sm" disabled={isLoading}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Team Login
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

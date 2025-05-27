@@ -3,15 +3,24 @@
 'use server';
 
 import bcrypt from 'bcryptjs';
-import { getUserByEmail, updateUser, getAllUsers, type UserRecord } from '@/services/baserowService';
+import { 
+  getUserByEmail, 
+  updateUser, 
+  getAllUsers, 
+  type UserRecord,
+  getCeoByEmail,
+  updateCeoRecord,
+  type CeoUserRecord
+} from '@/services/baserowService';
 
 interface LoginResult {
   success: boolean;
   error?: string;
-  firstTimeLogin?: boolean;
+  firstTimeLogin?: boolean; // Only for team members
   userEmail?: string;
   userName?: string;
-  userRole?: string;
+  userRole?: string; // Only for team members
+  isCeo?: boolean; // To identify CEO login
 }
 
 export async function verifyLogin(email: string, plainPassword_providedByUser: string): Promise<LoginResult> {
@@ -23,7 +32,7 @@ export async function verifyLogin(email: string, plainPassword_providedByUser: s
     }
 
     if (!user.Password) {
-      console.error(`User ${email} found but has no password set in Baserow.`);
+      console.error(`User ${email} found but has no password set in Baserow team table.`);
       return { success: false, error: 'Authentication error. Please contact support.' };
     }
     
@@ -36,19 +45,52 @@ export async function verifyLogin(email: string, plainPassword_providedByUser: s
     const isFirstTime = user['First time'] === 'YES';
     const nowISO = new Date().toISOString();
     const userName = user.Name || '';
-    const userRole = user.Role || 'Member'; // Default role if not set
+    const userRole = user.Role || 'Member'; 
 
     if (!isFirstTime) {
       await updateUser(user.id, { 'Last active': nowISO });
-      return { success: true, firstTimeLogin: false, userEmail: user.Email, userName, userRole };
+      return { success: true, firstTimeLogin: false, userEmail: user.Email, userName, userRole, isCeo: false };
     } else {
-      return { success: true, firstTimeLogin: true, userEmail: user.Email, userName, userRole };
+      // For first-time login, 'Last active' will be updated after password change if needed,
+      // or on subsequent logins. 'First signin' is handled during password change.
+      return { success: true, firstTimeLogin: true, userEmail: user.Email, userName, userRole, isCeo: false };
     }
   } catch (error: any) {
-    console.error('Login verification error:', error);
+    console.error('Team login verification error:', error);
     return { success: false, error: error.message || 'An unexpected error occurred during login.' };
   }
 }
+
+export async function verifyCeoLogin(email: string, plainPassword_providedByUser: string): Promise<LoginResult> {
+  try {
+    const ceo = await getCeoByEmail(email);
+
+    if (!ceo) {
+      return { success: false, error: 'Invalid CEO email or password.' };
+    }
+
+    if (!ceo.Password) {
+      console.error(`CEO ${email} found but has no password set in Baserow CEO table.`);
+      return { success: false, error: 'CEO authentication error. Please contact support.' };
+    }
+
+    const passwordMatches = await bcrypt.compare(plainPassword_providedByUser, ceo.Password);
+
+    if (!passwordMatches) {
+      return { success: false, error: 'Invalid CEO email or password.' };
+    }
+
+    const nowISO = new Date().toISOString();
+    await updateCeoRecord(ceo.id, { 'Last active': nowISO });
+    const userName = ceo.Name || 'CEO';
+
+    return { success: true, userEmail: ceo.Email, userName, isCeo: true };
+  } catch (error: any) {
+    console.error('CEO login verification error:', error);
+    return { success: false, error: error.message || 'An unexpected error occurred during CEO login.' };
+  }
+}
+
 
 interface ChangePasswordResult {
   success: boolean;
@@ -57,7 +99,7 @@ interface ChangePasswordResult {
 
 export async function changePassword(email: string, newPassword_plaintext: string): Promise<ChangePasswordResult> {
   try {
-    const user = await getUserByEmail(email);
+    const user = await getUserByEmail(email); // This is for team members
     if (!user) {
       return { success: false, error: 'User not found.' };
     }
@@ -72,12 +114,9 @@ export async function changePassword(email: string, newPassword_plaintext: strin
       'Last active': nowISO, 
     });
 
-    // updateUser might return null on success if response is 204 No Content
-    // For this specific operation, we consider it success if no error was thrown
-    if (updatedUser === undefined && !user) { // Baserow sometimes returns undefined, if it does and we don't have a user object means we failed
+    if (updatedUser === undefined && !user) { 
         return { success: false, error: 'Failed to update password. Please try again.' };
     }
-
 
     return { success: true };
   } catch (error: any) {
@@ -88,6 +127,7 @@ export async function changePassword(email: string, newPassword_plaintext: strin
 
 export async function updateUserLastActive(email: string): Promise<{ success: boolean; error?: string, userName?: string, userRole?: string }> {
   try {
+    // This function is specifically for team members, CEO "last active" is updated during CEO login.
     const user = await getUserByEmail(email);
     if (!user) {
       console.warn(`updateUserLastActive: User not found for email ${email}.`);
@@ -97,7 +137,6 @@ export async function updateUserLastActive(email: string): Promise<{ success: bo
     const nowISO = new Date().toISOString();
     await updateUser(user.id, { 'Last active': nowISO });
     
-    // Similar to changePassword, we check for existence of user if updateUser returns undefined
     if (user === undefined) {
          return { success: false, error: 'Failed to update last active time.' };
     }
@@ -109,9 +148,7 @@ export async function updateUserLastActive(email: string): Promise<{ success: bo
   }
 }
 
-interface AccountDetails extends Omit<UserRecord, 'Password' | 'order' | 'id'> {
-  // We don't want to send password hash to client
-}
+interface AccountDetails extends Omit<UserRecord, 'Password' | 'order' | 'id'> {}
 
 interface FetchAccountDetailsResult {
   success: boolean;
@@ -141,7 +178,7 @@ interface UpdateNameResult {
 
 export async function updateUserName(email: string, newName: string): Promise<UpdateNameResult> {
   try {
-    const user = await getUserByEmail(email);
+    const user = await getUserByEmail(email); // Assumes this is for team members
     if (!user) {
       return { success: false, error: 'User not found.' };
     }
@@ -165,7 +202,7 @@ export interface TeamMemberInfo {
   id: number;
   name: string;
   role: string;
-  email: string; // Will be obfuscated on client
+  email: string; 
 }
 
 interface FetchTeamInfoResult {

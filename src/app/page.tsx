@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { LoginDialog } from '@/components/auth/LoginDialog';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { updateUserLastActive } from '@/app/actions/authActions';
-import OpmImage from './opm.png'; // Import the local image
+import OpmImage from './opm.png'; 
 
 
 const homePageTasksData = [
@@ -30,30 +30,37 @@ export default function DashboardRedesignPage() {
   const [currentUserFullName, setCurrentUserFullName] = useState('');
   const [greeting, setGreeting] = useState('Morning');
   const [userFirstName, setUserFirstName] = useState('');
+  const [isCeoLoggedIn, setIsCeoLoggedIn] = useState(false);
 
 
   useEffect(() => {
     const storedEmail = localStorage.getItem('currentUserEmail');
     const storedFullName = localStorage.getItem('currentUserFullName');
+    const storedIsCeo = localStorage.getItem('isCeoLoggedIn') === 'true';
 
     if (storedEmail) {
       setIsAuthenticated(true);
       setShowLoginDialog(false);
       setCurrentUserFullName(storedFullName || '');
-      updateUserLastActive(storedEmail)
-        .then(res => {
-          if (res.success && res.userName) {
-            setCurrentUserFullName(res.userName);
-            localStorage.setItem('currentUserFullName', res.userName); // Keep localStorage updated
-          }
-        })
-        .catch(err => console.error("Failed to update last active time on revisit:", err));
+      setIsCeoLoggedIn(storedIsCeo);
+
+      if (!storedIsCeo) { // Only update last active for team members on revisit, CEO last active is updated during CEO login
+        updateUserLastActive(storedEmail)
+          .then(res => {
+            if (res.success && res.userName) {
+              setCurrentUserFullName(res.userName);
+              localStorage.setItem('currentUserFullName', res.userName); 
+            }
+          })
+          .catch(err => console.error("Failed to update last active time on revisit:", err));
+      }
     } else {
       if (!isAuthenticated && !showChangePasswordDialog) {
         setShowLoginDialog(true);
       }
     }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
 
   useEffect(() => {
@@ -77,29 +84,34 @@ export default function DashboardRedesignPage() {
     if (currentUserFullName) {
       setUserFirstName(currentUserFullName.split(' ')[0]);
     } else {
-        // Attempt to get from localStorage again if state isn't set yet (e.g. on fast refresh)
         const storedName = localStorage.getItem('currentUserFullName');
         if (storedName) {
             setCurrentUserFullName(storedName);
             setUserFirstName(storedName.split(' ')[0]);
         } else {
-            setUserFirstName(''); // Or a default like 'Team'
+            setUserFirstName(''); 
         }
     }
   }, [currentUserFullName, isAuthenticated]);
 
 
-  const handleLoginSuccess = (email: string, userName: string) => {
+  const handleLoginSuccess = (email: string, userName: string, isCeo?: boolean) => {
     setIsAuthenticated(true);
     setShowLoginDialog(false); 
     setCurrentUserFullName(userName);
+    setIsCeoLoggedIn(!!isCeo);
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
+    if (isCeo) {
+        localStorage.setItem('isCeoLoggedIn', 'true');
+    } else {
+        localStorage.removeItem('isCeoLoggedIn');
+    }
   };
 
   const handleFirstTimeLogin = (email: string, userName: string) => {
     setCurrentUserEmailForPasswordChange(email);
-    setCurrentUserFullName(userName); // Store full name for the change password dialog
+    setCurrentUserFullName(userName); 
     setShowLoginDialog(false); 
     setShowChangePasswordDialog(true);
   };
@@ -108,19 +120,23 @@ export default function DashboardRedesignPage() {
     setIsAuthenticated(true); 
     setShowChangePasswordDialog(false);
     setCurrentUserFullName(userName);
+    setIsCeoLoggedIn(false); // After password change, it's a team member
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
+    localStorage.removeItem('isCeoLoggedIn');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('currentUserEmail');
     localStorage.removeItem('currentUserFullName');
+    localStorage.removeItem('isCeoLoggedIn');
     setIsAuthenticated(false);
     setShowLoginDialog(true);
     setShowChangePasswordDialog(false);
     setCurrentUserEmailForPasswordChange('');
     setCurrentUserFullName('');
     setUserFirstName('');
+    setIsCeoLoggedIn(false);
   };
 
 
@@ -136,7 +152,7 @@ export default function DashboardRedesignPage() {
         }}
         onPasswordChangedSuccess={handlePasswordChangedSuccess}
         userEmail={currentUserEmailForPasswordChange}
-        userName={currentUserFullName} // Pass full name
+        userName={currentUserFullName}
       />
     );
   }
@@ -160,7 +176,7 @@ export default function DashboardRedesignPage() {
   if (isAuthenticated) {
     return ( 
       <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <NewTopNav onLogout={handleLogout} />
+        <NewTopNav onLogout={handleLogout} isCeoLoggedIn={isCeoLoggedIn} />
         <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
           {/* Header Section */}
           <section className="flex flex-col md:flex-row items-center justify-between gap-8">
@@ -180,7 +196,7 @@ export default function DashboardRedesignPage() {
                 height={400}
                 className="rounded-lg object-cover"
                 data-ai-hint="application logo abstract"
-                priority // Add priority if this is a critical LCP image
+                priority 
               />
             </div>
           </section>
@@ -382,7 +398,6 @@ export default function DashboardRedesignPage() {
             </div>
             <div className="p-6 bg-card rounded-lg shadow-sm">
               <p className="text-muted-foreground">Your latest activity will appear here...</p>
-              {/* In a real app, this would be a feed of activities */}
             </div>
           </section>
         </main>
@@ -392,7 +407,6 @@ export default function DashboardRedesignPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-       {/* Optional: Add a loading spinner here if desired while checking localStorage */}
     </div>
   );
 }

@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, LogOut } from 'lucide-react';
+import { ChevronDown, LogOut, Settings } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -31,9 +31,10 @@ const navItems: NavItem[] = [
 
 interface NewTopNavProps {
   onLogout?: () => void;
+  isCeoLoggedIn?: boolean;
 }
 
-export function NewTopNav({ onLogout }: NewTopNavProps) {
+export function NewTopNav({ onLogout, isCeoLoggedIn }: NewTopNavProps) {
   const pathname = usePathname();
 
   return (
@@ -71,8 +72,15 @@ export function NewTopNav({ onLogout }: NewTopNavProps) {
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild><Link href="/about-build">About This App</Link></DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild><Link href="/account-settings">Account Settings</Link></DropdownMenuItem>
-              <DropdownMenuItem asChild><Link href="/team-info">Team Info</Link></DropdownMenuItem>
+              {!isCeoLoggedIn && ( // Only show these for team members
+                <>
+                  <DropdownMenuItem asChild><Link href="/account-settings">Account Settings</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/team-info">Team Info</Link></DropdownMenuItem>
+                </>
+              )}
+              {isCeoLoggedIn && (
+                <DropdownMenuItem asChild><Link href="#">Extra Options</Link></DropdownMenuItem> 
+              )}
               {onLogout && (
                 <>
                   <DropdownMenuSeparator />

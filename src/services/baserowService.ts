@@ -3,21 +3,31 @@
 'use server';
 
 const BASEROW_API_URL = 'https://api.baserow.io';
-// IMPORTANT: In a real application, store API Key and Table ID in environment variables.
-const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; // As provided by user
-const BASEROW_TABLE_ID = '551777'; // As provided by user
+const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
+const BASEROW_TEAM_TABLE_ID = '551777'; 
+const BASEROW_CEO_TABLE_ID = '552544';
 
 export interface UserRecord {
   id: number;
   order: string;
   Name?: string;
   Email: string;
-  Password?: string; // This will be the bcrypt hash
-  'First signin'?: string; // Date string YYYY-MM-DDTHH:mm:ss.sssZ
-  'Last active'?: string; // Date string YYYY-MM-DDTHH:mm:ss.sssZ
+  Password?: string; 
+  'First signin'?: string; 
+  'Last active'?: string; 
   'First time'?: 'YES' | 'NO';
-  Role?: string; // New field
-  [key: string]: any; // For other fields
+  Role?: string; 
+  [key: string]: any; 
+}
+
+export interface CeoUserRecord {
+  id: number;
+  order: string;
+  Name?: string;
+  Email: string;
+  Password?: string;
+  'Last active'?: string;
+  [key: string]: any;
 }
 
 async function makeBaserowRequest(
@@ -48,18 +58,19 @@ async function makeBaserowRequest(
       throw new Error(errorData.detail || `Baserow API request failed: ${response.statusText}`);
     }
     if (method === 'GET' || method === 'PATCH' || method === 'POST') {
-      if (response.status === 204) return null; // Handle No Content response for PATCH
+      if (response.status === 204) return null; 
       return await response.json();
     }
-    return null; // For DELETE or other methods not returning JSON body
+    return null; 
   } catch (error) {
     console.error('Error in makeBaserowRequest:', error);
     throw error;
   }
 }
 
+// Team User Functions
 export async function getUserByEmail(email: string): Promise<UserRecord | null> {
-  const endpoint = `/api/database/rows/table/${BASEROW_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
+  const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
   try {
     const data = await makeBaserowRequest(endpoint, 'GET');
     if (data && data.results && data.results.length > 0) {
@@ -67,13 +78,13 @@ export async function getUserByEmail(email: string): Promise<UserRecord | null> 
     }
     return null;
   } catch (error) {
-    console.error(`Failed to fetch user by email ${email}:`, error);
+    console.error(`Failed to fetch user by email ${email} from team table:`, error);
     return null;
   }
 }
 
 export async function updateUser(rowId: number, updates: Partial<UserRecord>): Promise<UserRecord | null> {
-  const endpoint = `/api/database/rows/table/${BASEROW_TABLE_ID}/${rowId}/?user_field_names=true`;
+  const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/${rowId}/?user_field_names=true`;
   const fieldsToUpdate: { [key: string]: any } = {};
   for (const key in updates) {
     if (key !== 'id' && key !== 'order' && Object.prototype.hasOwnProperty.call(updates, key)) {
@@ -84,18 +95,49 @@ export async function updateUser(rowId: number, updates: Partial<UserRecord>): P
   try {
     return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
   } catch (error) {
-    console.error(`Failed to update user ${rowId}:`, error);
+    console.error(`Failed to update user ${rowId} in team table:`, error);
     return null;
   }
 }
 
 export async function getAllUsers(): Promise<UserRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_TABLE_ID}/?user_field_names=true&size=200`; // Adjust size as needed
+  const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/?user_field_names=true&size=200`; 
   try {
     const data = await makeBaserowRequest(endpoint, 'GET');
     return (data?.results || []) as UserRecord[];
   } catch (error) {
-    console.error('Failed to fetch all users:', error);
+    console.error('Failed to fetch all users from team table:', error);
     return [];
+  }
+}
+
+// CEO User Functions
+export async function getCeoByEmail(email: string): Promise<CeoUserRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_CEO_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
+  try {
+    const data = await makeBaserowRequest(endpoint, 'GET');
+    if (data && data.results && data.results.length > 0) {
+      return data.results[0] as CeoUserRecord;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Failed to fetch CEO by email ${email} from CEO table:`, error);
+    return null;
+  }
+}
+
+export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRecord>): Promise<CeoUserRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_CEO_TABLE_ID}/${rowId}/?user_field_names=true`;
+  const fieldsToUpdate: { [key: string]: any } = {};
+  for (const key in updates) {
+    if (key !== 'id' && key !== 'order' && Object.prototype.hasOwnProperty.call(updates, key)) {
+      fieldsToUpdate[key] = (updates as any)[key];
+    }
+  }
+  try {
+    return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
+  } catch (error) {
+    console.error(`Failed to update CEO record ${rowId} in CEO table:`, error);
+    return null;
   }
 }
