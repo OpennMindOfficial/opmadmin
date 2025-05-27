@@ -5,29 +5,23 @@
 const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
 
-// Corrected Table ID for team/user login and general user data
+// Table ID for team/user login and general user data
 const BASEROW_TEAM_TABLE_ID = '551777'; 
 
 // Table ID for CEO specific login
 const BASEROW_CEO_TABLE_ID = '552544';
 
-// Table ID for Subject Notes (assuming this was correctly set for notes functionality)
+// Table ID for Subject Notes
 const BASEROW_SUBJECT_NOTES_TABLE_ID = '552726'; 
 
 // Table IDs for Management Pages
 const BASEROW_ADD_SUBJECT_TABLE_ID = '548576';
 const BASEROW_BUG_REPORTS_TABLE_ID = '542797';
 const BASEROW_ABOUT_US_TABLE_ID = '542795';
-// Other table IDs from previous implementations:
-// const BASEROW_FACTS_TABLE_ID = '542791';
-// const BASEROW_PERFORMANCE_USER_MAIN_TABLE_ID = '546405';
-// const BASEROW_PERFORMANCE_SUBJECT_TABLE_ID = '546409';
-// const BASEROW_QUESTIONS_QB_TABLE_ID = '552908';
-// const BASEROW_NCERT_SOURCES_TABLE_ID = '552910';
-// const BASEROW_USER_ACCOUNTS_DATA_TABLE_ID = '542785'; // Protected
-// const BASEROW_PRO_USERS_DATA_TABLE_ID = '552928'; // Protected
-// const BASEROW_PAGE_PASSWORD_TABLE_ID = '552919';
-// const BASEROW_ACCESS_LOG_TABLE_ID = '552920';
+
+// Table IDs for Secure Page Access
+const BASEROW_PAGE_PASSWORD_TABLE_ID = '552919';
+const BASEROW_ACCESS_LOG_TABLE_ID = '552920';
 
 
 export interface UserRecord {
@@ -95,6 +89,26 @@ export interface AboutUsBaserowRecord {
   [key: string]: any;
 }
 
+// Interfaces for Secure Page Access
+export interface PagePasswordRecord {
+    id: number;
+    order: string;
+    Password?: string; // Stores the bcrypt hash
+    Identifier?: string; // Optional: To identify which page this password is for
+    [key: string]: any;
+}
+
+export interface AccessLogRecord {
+    id?: number; // Baserow will assign this
+    order?: string; // Baserow will assign this
+    Name?: string;
+    Email?: string;
+    'Date/Time'?: string; // ISO string
+    Result?: 'Success' | 'Failure';
+    Reason?: string; // e.g., "Incorrect Password", "Account Locked", "NULL" for success
+    [key: string]: any;
+}
+
 
 async function makeBaserowRequest(
   endpoint: string,
@@ -144,7 +158,7 @@ async function makeBaserowRequest(
     }
     
     const responseData = await response.json();
-    console.log(`[BaserowService] Response Data for ${method} ${url}:`, JSON.stringify(responseData, null, 2).substring(0, 500) + '...'); 
+    // console.log(`[BaserowService] Response Data for ${method} ${url}:`, JSON.stringify(responseData, null, 2).substring(0, 500) + '...'); 
     return responseData;
 
   } catch (error: any) {
@@ -188,15 +202,14 @@ export async function updateUser(rowId: number, updates: Partial<UserRecord>): P
       fieldsToUpdate[key] = (updates as any)[key];
     }
   }
-  console.log(`[BaserowService] Attempting to update user ${rowId} in table ${BASEROW_TEAM_TABLE_ID} with fields:`, JSON.stringify(fieldsToUpdate));
-
+  console.log(`[BaserowService] updateUser: Attempting to update user ${rowId} in table ${BASEROW_TEAM_TABLE_ID} with fields:`, JSON.stringify(fieldsToUpdate));
 
   try {
     const updatedUser = await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
-    console.log('[BaserowService] Update user response:', updatedUser);
+    console.log('[BaserowService] updateUser: Update user response:', updatedUser);
     return updatedUser;
   } catch (error) {
-    console.error(`[BaserowService] Failed to update user ${rowId} in table ${BASEROW_TEAM_TABLE_ID}:`, error);
+    console.error(`[BaserowService] updateUser: Failed to update user ${rowId} in table ${BASEROW_TEAM_TABLE_ID}:`, error);
     throw error; 
   }
 }
@@ -350,4 +363,76 @@ export async function updateAboutUsData(rowId: number = 1, contentData: Pick<Abo
     console.error(`[BaserowService] Failed to update About Us data in table ${BASEROW_ABOUT_US_TABLE_ID}, row ${rowId}:`, error);
     return null;
   }
+}
+
+// --- Service Functions for Secure Page Access ---
+export async function fetchFirstPagePassword(identifier?: string): Promise<PagePasswordRecord | null> {
+  let endpoint = `/api/database/rows/table/${BASEROW_PAGE_PASSWORD_TABLE_ID}/?user_field_names=true&size=1`;
+  // If you add an 'Identifier' field to table 552919 to distinguish passwords, you'd filter by it:
+  // if (identifier) {
+  //   endpoint = `/api/database/rows/table/${BASEROW_PAGE_PASSWORD_TABLE_ID}/?user_field_names=true&filter__Identifier__equal=${encodeURIComponent(identifier)}&size=1`;
+  // }
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    if (data && data.results && data.results.length > 0) {
+      return data.results[0] as PagePasswordRecord;
+    }
+    console.warn(`[BaserowService] No password record found in table ${BASEROW_PAGE_PASSWORD_TABLE_ID}. Endpoint: ${endpoint}`);
+    return null;
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch page password from table ${BASEROW_PAGE_PASSWORD_TABLE_ID}:`, error);
+    return null;
+  }
+}
+
+export async function createAccessLogEntry(logData: Partial<AccessLogRecord>): Promise<AccessLogRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_ACCESS_LOG_TABLE_ID}/?user_field_names=true`;
+  try {
+    // Ensure all required fields for Baserow are present, or make them optional in Baserow
+    const payload = {
+        Name: logData.Name || 'N/A',
+        Email: logData.Email || 'N/A',
+        'Date/Time': logData['Date/Time'] || new Date().toISOString(),
+        Result: logData.Result || 'Failure',
+        Reason: logData.Reason || 'Unknown',
+    };
+    return await makeBaserowRequest(endpoint, 'POST', payload);
+  } catch (error) {
+    console.error(`[BaserowService] Failed to create access log entry in table ${BASEROW_ACCESS_LOG_TABLE_ID}:`, error);
+    return null;
+  }
+}
+
+// --- Service Functions for Protected Data (User Accounts, Pro Users) ---
+// Assuming table 542785 is User Accounts Data
+const BASEROW_USER_ACCOUNTS_DATA_TABLE_ID = '542785';
+export async function fetchUserAccountData(): Promise<UserRecord[]> {
+    const endpoint = `/api/database/rows/table/${BASEROW_USER_ACCOUNTS_DATA_TABLE_ID}/?user_field_names=true&size=200`;
+    try {
+        const data = await makeBaserowRequest(endpoint);
+        return (data?.results || []) as UserRecord[];
+    } catch (error) {
+        console.error(`[BaserowService] Failed to fetch user account data from table ${BASEROW_USER_ACCOUNTS_DATA_TABLE_ID}:`, error);
+        return [];
+    }
+}
+
+// Assuming table 552928 is Pro Users Data
+const BASEROW_PRO_USERS_DATA_TABLE_ID = '552928';
+// Define ProUserRecord interface if fields differ significantly from UserRecord
+export interface ProUserSpecificRecord extends UserRecord { // Example, extend or make specific
+    DatePurchased?: string;
+    DateExpiring?: string;
+    Cost?: number;
+    'Monthly/Yearly'?: 'Monthly' | 'Yearly';
+}
+export async function fetchProUsersData(): Promise<ProUserSpecificRecord[]> {
+    const endpoint = `/api/database/rows/table/${BASEROW_PRO_USERS_DATA_TABLE_ID}/?user_field_names=true&size=200`;
+    try {
+        const data = await makeBaserowRequest(endpoint);
+        return (data?.results || []) as ProUserSpecificRecord[];
+    } catch (error) {
+        console.error(`[BaserowService] Failed to fetch pro users data from table ${BASEROW_PRO_USERS_DATA_TABLE_ID}:`, error);
+        return [];
+    }
 }
