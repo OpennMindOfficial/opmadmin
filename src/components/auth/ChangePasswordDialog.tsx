@@ -16,21 +16,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { changePassword } from '@/app/actions/authActions';
 import { useToast } from '@/hooks/use-toast';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, KeyRound } from 'lucide-react';
 
 interface ChangePasswordDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onPasswordChangedSuccess: (email: string, userName: string) => void; // Pass email and name up
-  userEmail: string;
+  onPasswordChangedSuccess: (email: string, userName: string, userId?: number) => void; // Pass email, name, and userId up
+  userId: number | null; // Receive Baserow user ID
+  userEmail: string; // Keep for display/logging if needed, but userId is primary
   userName: string; // Receive user's full name
 }
 
-export function ChangePasswordDialog({ 
-  isOpen, 
-  onOpenChange, 
+export function ChangePasswordDialog({
+  isOpen,
+  onOpenChange,
   onPasswordChangedSuccess,
-  userEmail,
+  userId,
+  userEmail, // Retained for context, but userId is used for the action
   userName
 }: ChangePasswordDialogProps) {
   const [newPassword, setNewPassword] = useState('');
@@ -49,7 +51,7 @@ export function ChangePasswordDialog({
       setError('Please confirm your new password.');
       return;
     }
-    if (newPassword.length < 6) {
+    if (newPassword.length < 6) { // Keep consistent with account settings page if needed, or update there
       setError('Password must be at least 6 characters long.');
       return;
     }
@@ -57,20 +59,26 @@ export function ChangePasswordDialog({
       setError('Passwords do not match.');
       return;
     }
-    
+    if (!userId) {
+      setError('User identifier is missing. Cannot change password.');
+      console.error("ChangePasswordDialog: userId is null or undefined.");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const result = await changePassword(userEmail, newPassword);
+      const result = await changePassword(userId, newPassword); // Use userId
       if (result.success) {
         toast({
           title: "Password Changed",
           description: "Your password has been successfully updated.",
-          variant: "default", 
+          variant: "default",
         });
-        localStorage.setItem('currentUserEmail', userEmail); 
-        localStorage.setItem('currentUserFullName', userName);
-        onPasswordChangedSuccess(userEmail, userName);
-        onOpenChange(false); 
+        localStorage.setItem('currentUserEmail', userEmail); // Persist email
+        localStorage.setItem('currentUserFullName', userName); // Persist name
+        if(userId) localStorage.setItem('userId', userId.toString()); // Persist userId
+        onPasswordChangedSuccess(userEmail, userName, userId); // Pass userId back
+        onOpenChange(false);
       } else {
         setError(result.error || 'Failed to change password.');
       }
@@ -95,47 +103,48 @@ export function ChangePasswordDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Change Your Password</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5 text-primary" />
+            Set Your New Password
+          </DialogTitle>
           <DialogDescription>
             This is your first sign-in. Please set a new password for your account.
-            This password can be changed only once through this initial setup. For future changes, please contact support.
+            This password can be changed later via Account Settings.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="new-password" className="text-right">
-              New Password
-            </Label>
+          <div className="space-y-1">
+            <Label htmlFor="new-password-initial">New Password</Label>
             <Input
-              id="new-password"
+              id="new-password-initial"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="col-span-3"
               placeholder="••••••••"
               disabled={isLoading}
+              className="bg-background dark:bg-muted/30"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="confirm-password" className="text-right">
-              Confirm Password
-            </Label>
+          <div className="space-y-1">
+            <Label htmlFor="confirm-password-initial">Confirm Password</Label>
             <Input
-              id="confirm-password"
+              id="confirm-password-initial"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="col-span-3"
               placeholder="••••••••"
               disabled={isLoading}
+              className="bg-background dark:bg-muted/30"
             />
           </div>
           {error && (
-            <p className="col-span-4 text-center text-sm text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/30">{error}</p>
+            <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/30 text-center">
+              {error}
+            </div>
           )}
         </div>
         <DialogFooter>
-          <Button type="submit" onClick={handleSubmit} disabled={isLoading} className="w-full">
+          <Button type="submit" onClick={handleSubmit} disabled={isLoading} className="w-full bg-primary hover:bg-primary/90">
             {isLoading ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -150,3 +159,5 @@ export function ChangePasswordDialog({
     </Dialog>
   );
 }
+
+    

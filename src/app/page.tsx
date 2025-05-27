@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
 import { TaskCard } from '@/components/dashboard/task-card';
-import { Sparkles, ChevronDown, Pin, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit } from 'lucide-react';
+import { Sparkles, ChevronDown, Pin, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { LoginDialog } from '@/components/auth/LoginDialog';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { updateUserLastActive } from '@/app/actions/authActions';
-import OpmImage from './opm.png'; 
+import OpmImage from './opm.png';
 
 
 const homePageTasksData = [
@@ -23,21 +23,24 @@ const homePageTasksData = [
 
 
 export default function DashboardRedesignPage() {
+  const [isClient, setIsClient] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showLoginDialog, setShowLoginDialog] = useState(true); 
+  const [showLoginDialog, setShowLoginDialog] = useState(true);
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [currentUserEmailForPasswordChange, setCurrentUserEmailForPasswordChange] = useState('');
+  const [currentUserIdForPasswordChange, setCurrentUserIdForPasswordChange] = useState<number | null>(null);
   const [currentUserFullName, setCurrentUserFullName] = useState('');
   const [greeting, setGreeting] = useState('Good morning');
   const [userFirstName, setUserFirstName] = useState('');
   const [isCeoLoggedIn, setIsCeoLoggedIn] = useState(false);
 
-
   useEffect(() => {
+    setIsClient(true); // Indicate client-side has mounted
+
     const storedEmail = localStorage.getItem('currentUserEmail');
     const storedFullName = localStorage.getItem('currentUserFullName');
     const storedIsCeo = localStorage.getItem('isCeoLoggedIn') === 'true';
-    const storedUserIdStr = localStorage.getItem('userId'); // Get user ID
+    const storedUserIdStr = localStorage.getItem('userId');
     const userId = storedUserIdStr ? parseInt(storedUserIdStr) : null;
 
     if (storedEmail && userId) {
@@ -46,34 +49,38 @@ export default function DashboardRedesignPage() {
       setCurrentUserFullName(storedFullName || '');
       setIsCeoLoggedIn(storedIsCeo);
 
-      if (!storedIsCeo) { 
-        updateUserLastActive(userId) // Pass userId
+      if (!storedIsCeo) {
+        updateUserLastActive(userId)
           .then(res => {
             if (res.success && res.userName) {
               setCurrentUserFullName(res.userName);
-              localStorage.setItem('currentUserFullName', res.userName); 
+              localStorage.setItem('currentUserFullName', res.userName);
+              if (res.userRole) localStorage.setItem('userRole', res.userRole);
             }
           })
           .catch(err => console.error("Failed to update last active time on revisit:", err));
       }
     } else {
-      if (!isAuthenticated && !showChangePasswordDialog) {
-        setShowLoginDialog(true);
-      }
+      // This logic will run if no persisted login is found
+      // setShowLoginDialog(true) is already the default state
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
 
   useEffect(() => {
+    if (!isClient) return; // Don't run this effect on server or before client mount
+
     if (!isAuthenticated && !showChangePasswordDialog && !localStorage.getItem('currentUserEmail')) {
       setShowLoginDialog(true);
     } else if (isAuthenticated || localStorage.getItem('currentUserEmail')) {
       setShowLoginDialog(false);
     }
-  }, [isAuthenticated, showChangePasswordDialog]);
+  }, [isAuthenticated, showChangePasswordDialog, isClient]);
 
   useEffect(() => {
+    if (!isClient) return;
+
     const currentHour = new Date().getHours();
     if (currentHour < 12) {
       setGreeting('Good morning');
@@ -83,23 +90,18 @@ export default function DashboardRedesignPage() {
       setGreeting('Good evening');
     }
 
-    if (currentUserFullName) {
-      setUserFirstName(currentUserFullName.split(' ')[0]);
+    const nameToUse = currentUserFullName || localStorage.getItem('currentUserFullName');
+    if (nameToUse) {
+      setUserFirstName(nameToUse.split(' ')[0]);
     } else {
-        const storedName = localStorage.getItem('currentUserFullName');
-        if (storedName) {
-            setCurrentUserFullName(storedName);
-            setUserFirstName(storedName.split(' ')[0]);
-        } else {
-            setUserFirstName(''); 
-        }
+      setUserFirstName('');
     }
-  }, [currentUserFullName, isAuthenticated]);
+  }, [currentUserFullName, isAuthenticated, isClient]);
 
 
   const handleLoginSuccess = (email: string, userName: string, userId?: number, userRole?: string, isCeo?: boolean, authMethod?: string) => {
     setIsAuthenticated(true);
-    setShowLoginDialog(false); 
+    setShowLoginDialog(false);
     setCurrentUserFullName(userName);
     setIsCeoLoggedIn(!!isCeo);
     localStorage.setItem('currentUserEmail', email);
@@ -117,22 +119,22 @@ export default function DashboardRedesignPage() {
 
   const handleFirstTimeLogin = (email: string, userName: string, userId?: number, userRole?: string, authMethod?: string) => {
     setCurrentUserEmailForPasswordChange(email);
-    setCurrentUserFullName(userName); 
-    if (userId) localStorage.setItem('userId', userId.toString()); // Store userId for password change
+    setCurrentUserFullName(userName);
+    if(userId) setCurrentUserIdForPasswordChange(userId);
     if (userRole) localStorage.setItem('userRole', userRole);
     if (authMethod) localStorage.setItem('authMethod', authMethod);
-    setShowLoginDialog(false); 
+    setShowLoginDialog(false);
     setShowChangePasswordDialog(true);
   };
 
   const handlePasswordChangedSuccess = (email: string, userName: string, userId?: number) => {
-    setIsAuthenticated(true); 
+    setIsAuthenticated(true);
     setShowChangePasswordDialog(false);
     setCurrentUserFullName(userName);
-    setIsCeoLoggedIn(false); 
+    setIsCeoLoggedIn(false);
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
-    if (userId) localStorage.setItem('userId', userId.toString());
+    if (userId) localStorage.setItem('userId', userId.toString()); // Ensure userId is stored if available
     localStorage.removeItem('isCeoLoggedIn');
   };
 
@@ -144,42 +146,48 @@ export default function DashboardRedesignPage() {
     localStorage.removeItem('userRole');
     localStorage.removeItem('authMethod');
     setIsAuthenticated(false);
-    setShowLoginDialog(true);
+    setShowLoginDialog(true); // Show login dialog after logout
     setShowChangePasswordDialog(false);
     setCurrentUserEmailForPasswordChange('');
+    setCurrentUserIdForPasswordChange(null);
     setCurrentUserFullName('');
     setUserFirstName('');
     setIsCeoLoggedIn(false);
   };
 
+  if (!isClient) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  if (showChangePasswordDialog && currentUserEmailForPasswordChange) {
-    return ( 
+  if (showChangePasswordDialog && (currentUserEmailForPasswordChange || currentUserIdForPasswordChange)) {
+    return (
       <ChangePasswordDialog
         isOpen={showChangePasswordDialog}
         onOpenChange={(isOpen) => {
           setShowChangePasswordDialog(isOpen);
           if (!isOpen && !isAuthenticated && !localStorage.getItem('currentUserEmail')) {
-            setShowLoginDialog(true); 
+            setShowLoginDialog(true);
           }
         }}
         onPasswordChangedSuccess={handlePasswordChangedSuccess}
-        userEmail={currentUserEmailForPasswordChange} // Kept for legacy, though userId is preferred
+        // Pass userId to ChangePasswordDialog as it's more reliable
+        userId={currentUserIdForPasswordChange}
+        userEmail={currentUserEmailForPasswordChange} // Keep for compatibility if needed
         userName={currentUserFullName}
       />
     );
   }
-  
+
   if (!isAuthenticated && showLoginDialog) {
-     return ( 
+     return (
       <LoginDialog
-        isOpen={showLoginDialog} 
+        isOpen={showLoginDialog}
         onOpenChange={(isOpen) => {
-          setShowLoginDialog(isOpen); 
-          if (!isOpen && !isAuthenticated && !showChangePasswordDialog && !localStorage.getItem('currentUserEmail')) {
-            // This condition might need adjustment if closing the dialog is intended to always re-show it
-            // setShowLoginDialog(true); // Reconsider this if non-auth closure should lead to a blank page
-          }
+          setShowLoginDialog(isOpen);
         }}
         onLoginSuccess={handleLoginSuccess}
         onFirstTimeLogin={handleFirstTimeLogin}
@@ -188,7 +196,7 @@ export default function DashboardRedesignPage() {
   }
 
   if (isAuthenticated) {
-    return ( 
+    return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <NewTopNav onLogout={handleLogout} isCeoLoggedIn={isCeoLoggedIn} />
         <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
@@ -212,7 +220,7 @@ export default function DashboardRedesignPage() {
                 height={400}
                 className="rounded-lg object-cover"
                 data-ai-hint="application logo"
-                priority 
+                priority
               />
             </div>
           </section>
@@ -224,14 +232,14 @@ export default function DashboardRedesignPage() {
               <h2 className="text-2xl font-semibold">Quick Actions & Management</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <NewActionCard
+               <NewActionCard
                 title="Create Subject Notes"
                 description="Draft and organize comprehensive notes for various academic subjects."
                 imageHint="notes education"
                 actionIcon={NotebookPen}
                 cardVariant="page"
                 primaryActionLabel="Create"
-                href="/actions/create-subject-notes" 
+                href="/actions/create-subject-notes"
               />
               <NewActionCard
                 title="Add Subject"
@@ -300,7 +308,7 @@ export default function DashboardRedesignPage() {
                 title="User's Account Data"
                 description="Access and manage individual user account details and settings (secure access)."
                 imageHint="user profile"
-                actionIcon={Users} // Consider UserCog for management
+                actionIcon={Users}
                 cardVariant="account"
                 primaryActionLabel="Manage"
                 href="/actions/user-accounts"
@@ -354,7 +362,7 @@ export default function DashboardRedesignPage() {
                 title="Website Traffic"
                 description="Analyze data on website visits, user flow, and engagement patterns."
                 imageHint="analytics traffic"
-                actionIcon={ActivityIconLucide} // Using generic Activity, consider specific analytics icon if available
+                actionIcon={ActivityIconLucide}
                 cardVariant="data"
                 primaryActionLabel="Analyze"
                 href="/actions/website-traffic"
@@ -421,10 +429,11 @@ export default function DashboardRedesignPage() {
     );
   }
 
-  // Fallback for non-authenticated, non-dialog state
+  // Fallback loading state
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      {/* Optionally, add a loading spinner or a minimal message here if needed */}
+       <p className="text-muted-foreground">Initializing OpennMind...</p>
+       <Loader2 className="h-8 w-8 animate-spin text-primary ml-2" />
     </div>
   );
 }
