@@ -19,7 +19,7 @@ import { verifyLogin } from '@/app/actions/authActions';
 interface LoginDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onLoginSuccess: () => void;
+  onLoginSuccess: (email: string) => void; // Pass email up
   onFirstTimeLogin: (email: string) => void;
 }
 
@@ -48,10 +48,10 @@ export function LoginDialog({
   useEffect(() => {
     if (isOpen) {
       setCaptchaCode(generateCaptcha());
-      setCaptchaInput(''); // Reset captcha input when dialog opens or captcha refreshes
-      setError(''); // Clear previous errors
+      setCaptchaInput(''); 
+      setError(''); 
     }
-  }, [isOpen]); // Re-generate captcha only when isOpen changes to true
+  }, [isOpen]); 
 
   const handleRefreshCaptcha = () => {
     setCaptchaCode(generateCaptcha());
@@ -82,13 +82,14 @@ export function LoginDialog({
     setIsLoading(true);
     try {
       const result = await verifyLogin(email, password);
-      if (result.success) {
-        if (result.firstTimeLogin && result.userEmail) {
-          onOpenChange(false); // Signal dialog to close before parent handles transition
+      if (result.success && result.userEmail) {
+        if (result.firstTimeLogin) {
+          onOpenChange(false); 
           onFirstTimeLogin(result.userEmail); 
         } else {
-          onOpenChange(false); // Signal dialog to close before parent handles transition
-          onLoginSuccess(); 
+          localStorage.setItem('currentUserEmail', result.userEmail); // Store email for persistence
+          onOpenChange(false); 
+          onLoginSuccess(result.userEmail); 
         }
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');

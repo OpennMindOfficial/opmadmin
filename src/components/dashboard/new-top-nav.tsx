@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, LogOut } from 'lucide-react'; // Added LogOut icon
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -27,10 +27,14 @@ const navItems: NavItem[] = [
   { href: '/tasks', label: 'Tasks', count: 1, exact: true },
   { href: '/activity', label: 'Activity', exact: true },
   { href: '/functioning', label: 'Functioning', exact: true },
-  { href: '/code-changes', label: 'Code Changes', exact: true }, // Added here
+  { href: '/code-changes', label: 'Code Changes', exact: true },
 ];
 
-export function NewTopNav() {
+interface NewTopNavProps {
+  onLogout?: () => void; // Optional logout handler
+}
+
+export function NewTopNav({ onLogout }: NewTopNavProps) {
   const pathname = usePathname();
 
   return (
@@ -72,12 +76,18 @@ export function NewTopNav() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild><Link href="/about-build">About This App</Link></DropdownMenuItem>
-              {/* Removed "Code Changes" from here */}
               <DropdownMenuSeparator />
               <DropdownMenuItem>Account Settings</DropdownMenuItem>
               <DropdownMenuItem>Team Settings</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
+              {onLogout && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="text-destructive hover:!bg-destructive/10 hover:!text-destructive focus:!bg-destructive/10 focus:!text-destructive cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

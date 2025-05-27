@@ -32,12 +32,12 @@ export async function verifyLogin(email: string, plainPassword_providedByUser: s
     }
 
     const isFirstTime = user['First time'] === 'YES';
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const nowISO = new Date().toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
 
     if (!isFirstTime) {
       // Update 'Last active' for returning user
-      await updateUser(user.id, { 'Last active': today });
-      return { success: true, firstTimeLogin: false };
+      await updateUser(user.id, { 'Last active': nowISO });
+      return { success: true, firstTimeLogin: false, userEmail: user.Email }; // Pass email for localStorage
     } else {
       // It's a first-time login, don't update 'Last active' yet.
       // 'First signin' will be updated after password change.
@@ -62,14 +62,13 @@ export async function changePassword(email: string, newPassword_plaintext: strin
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword_plaintext, 10);
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const nowISO = new Date().toISOString(); // YYYY-MM-DDTHH:mm:ss.sssZ
 
     const updatedUser = await updateUser(user.id, {
       Password: hashedNewPassword,
       'First time': 'NO',
-      'First signin': today,
-      // Optionally update 'Last active' here as well, or upon next login
-      'Last active': today, 
+      'First signin': nowISO,
+      'Last active': nowISO, 
     });
 
     if (!updatedUser) {
@@ -80,5 +79,28 @@ export async function changePassword(email: string, newPassword_plaintext: strin
   } catch (error: any) {
     console.error('Password change error:', error);
     return { success: false, error: error.message || 'An unexpected error occurred while changing password.' };
+  }
+}
+
+export async function updateUserLastActive(email: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getUserByEmail(email);
+    if (!user) {
+      // Don't treat 'user not found' as a critical error for this specific action,
+      // as localStorage might hold an outdated email. Silently fail or log.
+      console.warn(`updateUserLastActive: User not found for email ${email}.`);
+      return { success: false, error: 'User not found for last active update.' };
+    }
+
+    const nowISO = new Date().toISOString();
+    const updated = await updateUser(user.id, { 'Last active': nowISO });
+
+    if (!updated) {
+      return { success: false, error: 'Failed to update last active time.' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error updating last active time for ${email}:`, error);
+    return { success: false, error: 'An unexpected error occurred while updating last active time.' };
   }
 }
