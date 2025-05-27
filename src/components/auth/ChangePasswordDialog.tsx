@@ -2,7 +2,7 @@
 // src/components/auth/ChangePasswordDialog.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,7 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { changePassword } from '@/app/actions/authActions'; // Server Action
+import { changePassword } from '@/app/actions/authActions';
+import { useToast } from '@/hooks/use-toast';
+import { RefreshCw } from 'lucide-react';
 
 interface ChangePasswordDialogProps {
   isOpen: boolean;
@@ -33,9 +35,18 @@ export function ChangePasswordDialog({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async () => {
     setError('');
+    if (!newPassword.trim()) {
+      setError('Please enter a new password.');
+      return;
+    }
+    if (!confirmPassword.trim()) {
+      setError('Please confirm your new password.');
+      return;
+    }
     if (newPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
@@ -49,8 +60,13 @@ export function ChangePasswordDialog({
     try {
       const result = await changePassword(userEmail, newPassword);
       if (result.success) {
+        toast({
+          title: "Password Changed",
+          description: "Your password has been successfully updated.",
+          variant: "default", // Or "success" if you have such variant
+        });
         onPasswordChangedSuccess();
-        onOpenChange(false); // Close dialog
+        onOpenChange(false); 
       } else {
         setError(result.error || 'Failed to change password.');
       }
@@ -61,15 +77,14 @@ export function ChangePasswordDialog({
     }
   };
 
-  // Reset form state when dialog is opened/closed
-  useState(() => {
+  useEffect(() => {
     if (!isOpen) {
       setNewPassword('');
       setConfirmPassword('');
       setError('');
       setIsLoading(false);
     }
-  });
+  }, [isOpen]);
 
 
   return (
@@ -94,6 +109,7 @@ export function ChangePasswordDialog({
               onChange={(e) => setNewPassword(e.target.value)}
               className="col-span-3"
               placeholder="••••••••"
+              disabled={isLoading}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -107,15 +123,23 @@ export function ChangePasswordDialog({
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="col-span-3"
               placeholder="••••••••"
+              disabled={isLoading}
             />
           </div>
           {error && (
-            <p className="col-span-4 text-center text-sm text-destructive">{error}</p>
+            <p className="col-span-4 text-center text-sm text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/30">{error}</p>
           )}
         </div>
         <DialogFooter>
           <Button type="submit" onClick={handleSubmit} disabled={isLoading} className="w-full">
-            {isLoading ? 'Changing...' : 'Set New Password'}
+            {isLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Changing...
+              </>
+            ) : (
+              'Set New Password'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -13,14 +13,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RefreshCw } from 'lucide-react'; // Icon for refresh captcha
-import { verifyLogin } from '@/app/actions/authActions'; // Server Action
+import { RefreshCw } from 'lucide-react';
+import { verifyLogin } from '@/app/actions/authActions';
 
 interface LoginDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onLoginSuccess: () => void;
-  onFirstTimeLogin: (email: string) => void; // Callback to trigger change password dialog
+  onFirstTimeLogin: (email: string) => void;
 }
 
 const generateCaptcha = (length: number = 6): string => {
@@ -50,23 +50,32 @@ export function LoginDialog({
       setCaptchaCode(generateCaptcha());
       setCaptchaInput('');
       setError('');
-      // Optional: reset email/password fields if desired on dialog open
-      // setEmail(''); 
-      // setPassword('');
     }
   }, [isOpen]);
 
   const handleRefreshCaptcha = () => {
     setCaptchaCode(generateCaptcha());
     setCaptchaInput('');
-    setError(''); // Clear previous captcha errors
+    setError(''); 
   };
 
   const handleSignIn = async () => {
-    setError(''); // Clear previous errors
+    setError(''); 
+    if (!email.trim()) {
+      setError('Please enter your email.');
+      return;
+    }
+    if (!password.trim()) {
+      setError('Please enter your password.');
+      return;
+    }
+    if (!captchaInput.trim()) {
+      setError('Please enter the captcha code.');
+      return;
+    }
     if (captchaInput.toLowerCase() !== captchaCode.toLowerCase()) {
       setError('Captcha does not match. Please try again.');
-      handleRefreshCaptcha(); // Refresh captcha on error
+      handleRefreshCaptcha(); 
       return;
     }
     
@@ -75,14 +84,14 @@ export function LoginDialog({
       const result = await verifyLogin(email, password);
       if (result.success) {
         if (result.firstTimeLogin && result.userEmail) {
-          onOpenChange(false); // Close login dialog
-          onFirstTimeLogin(result.userEmail); // Trigger change password dialog
+          onOpenChange(false); 
+          onFirstTimeLogin(result.userEmail); 
         } else {
-          onLoginSuccess(); // Regular login
+          onLoginSuccess(); 
         }
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');
-        handleRefreshCaptcha(); // Refresh captcha on login error too
+        handleRefreshCaptcha(); 
       }
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
@@ -92,16 +101,16 @@ export function LoginDialog({
     }
   };
   
-  // Reset form state when dialog is closed externally without logging in
   useEffect(() => {
+    // This effect ensures that if the dialog is externally closed (e.g. ESC key)
+    // without successful login, it re-triggers the onOpenChange to reflect that.
+    // The parent page (page.tsx) manages whether to re-show the dialog if isAuthenticated is false.
     if (!isOpen) {
-      // setEmail('');
-      // setPassword('');
-      // setCaptchaInput('');
-      // setError(''); 
-      // Decide if you want to clear fields when dialog is closed via onOpenChange(false)
+        // If dialog is closed and user is not yet authenticated, 
+        // onOpenChange(false) would have been called by Radix.
+        // The logic in page.tsx handles re-opening if needed.
     }
-  }, [isOpen]);
+  }, [isOpen, onOpenChange]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -171,14 +180,19 @@ export function LoginDialog({
             />
           </div>
           {error && (
-            <div className="col-span-4 text-center text-sm text-destructive">
+            <div className="col-span-4 text-center text-sm text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/30">
               {error}
             </div>
           )}
         </div>
         <DialogFooter className="flex flex-col gap-2 sm:flex-col sm:gap-2">
           <Button type="submit" onClick={handleSignIn} className="w-full" disabled={isLoading}>
-            {isLoading ? 'Signing In...' : 'Sign In'}
+            {isLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Signing In...
+              </>
+            ) : 'Sign In'}
           </Button>
         </DialogFooter>
       </DialogContent>
