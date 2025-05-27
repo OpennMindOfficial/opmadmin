@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -70,8 +71,11 @@ export function NewTopNav() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild><Link href="/about-build">About This App</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/code-changes">Code Changes</Link></DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem>Account Settings</DropdownMenuItem>
               <DropdownMenuItem>Team Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem>Logout</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
