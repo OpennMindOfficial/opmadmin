@@ -72,15 +72,13 @@ export function NewTopNav({ onLogout, isCeoLoggedIn }: NewTopNavProps) {
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild><Link href="/about-build">About This App</Link></DropdownMenuItem>
               <DropdownMenuSeparator />
-              {!isCeoLoggedIn && ( // Only show these for team members
-                <>
-                  <DropdownMenuItem asChild><Link href="/account-settings">Account Settings</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/team-info">Team Info</Link></DropdownMenuItem>
-                </>
-              )}
+              <DropdownMenuItem asChild><Link href="/account-settings">Account Settings</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/team-info">Team Info</Link></DropdownMenuItem>
+              
               {isCeoLoggedIn && (
-                <DropdownMenuItem asChild><Link href="#">Extra Options</Link></DropdownMenuItem> 
+                <DropdownMenuItem asChild><Link href="/extra-options">Extra Options</Link></DropdownMenuItem> 
               )}
+              
               {onLogout && (
                 <>
                   <DropdownMenuSeparator />

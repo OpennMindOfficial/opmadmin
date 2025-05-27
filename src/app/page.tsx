@@ -44,7 +44,7 @@ export default function DashboardRedesignPage() {
       setCurrentUserFullName(storedFullName || '');
       setIsCeoLoggedIn(storedIsCeo);
 
-      if (!storedIsCeo) { // Only update last active for team members on revisit, CEO last active is updated during CEO login
+      if (!storedIsCeo) { 
         updateUserLastActive(storedEmail)
           .then(res => {
             if (res.success && res.userName) {
@@ -60,7 +60,7 @@ export default function DashboardRedesignPage() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, []); 
 
 
   useEffect(() => {
@@ -120,7 +120,7 @@ export default function DashboardRedesignPage() {
     setIsAuthenticated(true); 
     setShowChangePasswordDialog(false);
     setCurrentUserFullName(userName);
-    setIsCeoLoggedIn(false); // After password change, it's a team member
+    setIsCeoLoggedIn(false); 
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
     localStorage.removeItem('isCeoLoggedIn');
@@ -182,10 +182,12 @@ export default function DashboardRedesignPage() {
           <section className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="space-y-2">
               <h1 className="text-4xl font-bold tracking-tight">
-                {greeting}, {userFirstName || 'User'}!
+                {greeting}, {userFirstName || (isCeoLoggedIn ? 'CEO' : 'User')}!
               </h1>
               <p className="text-lg text-muted-foreground">
-                Fuel your day with an OpennMind. Let's organize and achieve!
+                 {isCeoLoggedIn
+                    ? "Welcome, CEO. Oversee your OpennMind platform's strategy and operations."
+                    : "Fuel your day with an OpennMind. Let's organize and achieve!"}
               </p>
             </div>
             <div className="w-full md:w-1/3 lg:w-1/4 xl:w-1/5">
