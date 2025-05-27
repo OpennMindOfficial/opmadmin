@@ -48,10 +48,10 @@ export function LoginDialog({
   useEffect(() => {
     if (isOpen) {
       setCaptchaCode(generateCaptcha());
-      setCaptchaInput('');
-      setError('');
+      setCaptchaInput(''); // Reset captcha input when dialog opens or captcha refreshes
+      setError(''); // Clear previous errors
     }
-  }, [isOpen]);
+  }, [isOpen]); // Re-generate captcha only when isOpen changes to true
 
   const handleRefreshCaptcha = () => {
     setCaptchaCode(generateCaptcha());
@@ -84,9 +84,10 @@ export function LoginDialog({
       const result = await verifyLogin(email, password);
       if (result.success) {
         if (result.firstTimeLogin && result.userEmail) {
-          onOpenChange(false); 
+          onOpenChange(false); // Signal dialog to close before parent handles transition
           onFirstTimeLogin(result.userEmail); 
         } else {
+          onOpenChange(false); // Signal dialog to close before parent handles transition
           onLoginSuccess(); 
         }
       } else {
@@ -101,17 +102,6 @@ export function LoginDialog({
     }
   };
   
-  useEffect(() => {
-    // This effect ensures that if the dialog is externally closed (e.g. ESC key)
-    // without successful login, it re-triggers the onOpenChange to reflect that.
-    // The parent page (page.tsx) manages whether to re-show the dialog if isAuthenticated is false.
-    if (!isOpen) {
-        // If dialog is closed and user is not yet authenticated, 
-        // onOpenChange(false) would have been called by Radix.
-        // The logic in page.tsx handles re-opening if needed.
-    }
-  }, [isOpen, onOpenChange]);
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -151,7 +141,7 @@ export function LoginDialog({
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="captcha-login" className="text-right whitespace-nowrap">
+            <Label htmlFor="captcha-display" className="text-right whitespace-nowrap">
               Captcha
             </Label>
             <div className="col-span-3 flex items-center gap-2">

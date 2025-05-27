@@ -10,7 +10,7 @@ import { TaskCard } from '@/components/dashboard/task-card';
 import { Sparkles, ChevronDown, Pin, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit } from 'lucide-react';
 import Link from 'next/link';
 import { LoginDialog } from '@/components/auth/LoginDialog';
-import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'; // Import new dialog
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 
 // Mock data for "Tasks assigned to you" on the homepage
 const homePageTasksData = [
@@ -31,43 +31,64 @@ export default function DashboardRedesignPage() {
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
     setShowLoginDialog(false); // Close login dialog
-    setShowChangePasswordDialog(false); // Ensure change password dialog is also closed
   };
 
   const handleFirstTimeLogin = (email: string) => {
     setCurrentUserEmailForPasswordChange(email);
+    setShowLoginDialog(false); // Ensure login dialog is closed before opening change password
     setShowChangePasswordDialog(true);
-    // Login dialog is already closed by its own logic before calling this
   };
 
   const handlePasswordChangedSuccess = () => {
     setIsAuthenticated(true); // Now fully authenticated
     setShowChangePasswordDialog(false);
-    // Could show a toast message here: "Password changed successfully!"
+    // Toast for password changed is handled within ChangePasswordDialog
   };
 
 
   useEffect(() => {
-    // This effect can be used to manage dialog visibility based on auth state if needed
-    // Forcing login dialog if not authenticated and no other dialog is up
+    // This effect ensures that if the app is in a state where the user is not authenticated,
+    // and the change password dialog is not active, then the login dialog should be shown.
     if (!isAuthenticated && !showChangePasswordDialog) {
-        setShowLoginDialog(true);
+      setShowLoginDialog(true);
+    } else if (isAuthenticated) {
+      // If authenticated, ensure login dialog is not shown.
+      setShowLoginDialog(false);
     }
-  }, [isAuthenticated, showLoginDialog, showChangePasswordDialog]);
+  }, [isAuthenticated, showChangePasswordDialog]);
 
 
-  if (!isAuthenticated && showLoginDialog) {
-    return (
-      <LoginDialog
-        isOpen={showLoginDialog}
+  if (showChangePasswordDialog && currentUserEmailForPasswordChange) {
+    return ( // Ensure this block returns
+      <ChangePasswordDialog
+        isOpen={showChangePasswordDialog}
         onOpenChange={(isOpen) => {
+          setShowChangePasswordDialog(isOpen);
+          // If user closes change password dialog without completing and isn't auth'd,
+          // revert to login dialog via the useEffect.
           if (!isOpen && !isAuthenticated) {
-            // User tried to close dialog without logging in.
-            // To make it strictly mandatory, don't change showLoginDialog.
-            // For a slightly more flexible approach (allowing closure but keeping unauth state):
-            // setShowLoginDialog(isOpen); 
-          } else {
-            setShowLoginDialog(isOpen);
+            setShowLoginDialog(true); // Re-trigger login dialog if needed
+          }
+        }}
+        onPasswordChangedSuccess={handlePasswordChangedSuccess}
+        userEmail={currentUserEmailForPasswordChange}
+      />
+    );
+  }
+  
+  // If not authenticated (and not in password change flow), show login dialog.
+  if (!isAuthenticated) {
+     return ( // Ensure this block returns
+      <LoginDialog
+        isOpen={showLoginDialog} // Controlled by state
+        onOpenChange={(isOpen) => {
+          // If user tries to close it (isOpen becomes false) without authenticating,
+          // and not in change password flow, the useEffect should force it back open.
+          setShowLoginDialog(isOpen); 
+          if (!isOpen && !isAuthenticated && !showChangePasswordDialog) {
+            // Redundantly ensure it's set to open if closed without auth
+            // The useEffect might be sufficient, but this is an extra guard.
+            setShowLoginDialog(true); 
           }
         }}
         onLoginSuccess={handleLoginSuccess}
@@ -75,266 +96,234 @@ export default function DashboardRedesignPage() {
       />
     );
   }
-  
-  if (showChangePasswordDialog && currentUserEmailForPasswordChange) {
-    return (
-      <ChangePasswordDialog
-        isOpen={showChangePasswordDialog}
-        onOpenChange={setShowChangePasswordDialog}
-        onPasswordChangedSuccess={handlePasswordChangedSuccess}
-        userEmail={currentUserEmailForPasswordChange}
-      />
-    );
-  }
 
+  // If authenticated, render the main page content.
+  // This is only reached if isAuthenticated is true AND showChangePasswordDialog is false.
+  return ( // Ensure this block returns
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <NewTopNav />
+      <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+        {/* Header Section */}
+        <section className="flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight">Morning Team!</h1>
+            <p className="text-lg text-muted-foreground">
+              Collaborate with your team and organize your work here!
+            </p>
+          </div>
+          <div className="w-full md:w-1/3 lg:w-1/4 xl:w-1/5">
+            <Image
+              src="https://placehold.co/600x400.png"
+              alt="Abstract team collaboration graphic"
+              width={600}
+              height={400}
+              className="rounded-lg object-cover"
+              data-ai-hint="abstract network play button"
+            />
+          </div>
+        </section>
 
-  if (isAuthenticated) { // Only render page if fully authenticated
-    return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <NewTopNav />
-        <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
-          {/* Header Section */}
-          <section className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold tracking-tight">Morning Team!</h1>
-              <p className="text-lg text-muted-foreground">
-                Collaborate with your team and organize your work here!
-              </p>
-            </div>
-            <div className="w-full md:w-1/3 lg:w-1/4 xl:w-1/5">
-              <Image
-                src="https://placehold.co/600x400.png"
-                alt="Abstract team collaboration graphic"
-                width={600}
-                height={400}
-                className="rounded-lg object-cover"
-                data-ai-hint="abstract network play button"
-              />
-            </div>
-          </section>
+        {/* Actions Section */}
+        <section className="space-y-6">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-semibold">Quick Actions & Management</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <NewActionCard
+              title="Create Subject Notes"
+              description="Draft and organize comprehensive notes for various academic subjects."
+              imageHint="notes education"
+              actionIcon={NotebookPen}
+              cardVariant="page"
+              primaryActionLabel="Create"
+              href="/actions/create-subject-notes" 
+            />
+            <NewActionCard
+              title="Add Subject"
+              description="Introduce a new subject area or course to the learning platform."
+              imageHint="subject plus"
+              actionIcon={PlusCircleIcon}
+              cardVariant="task"
+              primaryActionLabel="Add"
+              href="/actions/add-subject"
+            />
+            <NewActionCard
+              title="View Reported Bugs"
+              description="Track, review, and manage software bugs reported by users."
+              imageHint="bug report"
+              actionIcon={Bug}
+              cardVariant="data"
+              primaryActionLabel="View"
+              href="/actions/view-bugs"
+            />
+            <NewActionCard
+              title="Edit About Us"
+              description="Update the 'About Us' page content for the platform."
+              imageHint="content edit"
+              actionIcon={FileText}
+              cardVariant="content"
+              primaryActionLabel="Edit"
+              href="/actions/edit-about-us"
+            />
+             <NewActionCard
+              title="Add Facts"
+              description="Contribute interesting and relevant facts to the platform's knowledge base."
+              imageHint="fact list"
+              actionIcon={ListPlus}
+              cardVariant="task"
+              primaryActionLabel="Add"
+              href="/actions/add-facts"
+            />
+            <NewActionCard
+              title="Performance Tracking"
+              description="Analyze user performance metrics and engagement statistics."
+              imageHint="analytics chart"
+              actionIcon={BarChart3}
+              cardVariant="data"
+              primaryActionLabel="Analyze"
+              href="/actions/performance-tracking"
+            />
+            <NewActionCard
+              title="Add Questions to QB"
+              description="Expand the question bank by adding new questions and answers."
+              imageHint="question bank"
+              actionIcon={FileQuestion}
+              cardVariant="page"
+              primaryActionLabel="Add"
+              href="/actions/add-questions"
+            />
+            <NewActionCard
+              title="NCERT Sources"
+              description="Manage and reference NCERT educational materials and resources."
+              imageHint="education book"
+              actionIcon={Library}
+              cardVariant="content"
+              primaryActionLabel="Manage"
+              href="/actions/ncert-sources"
+            />
+            <NewActionCard
+              title="User's Account Data"
+              description="Access and manage individual user account details and settings."
+              imageHint="user profile"
+              actionIcon={Users}
+              cardVariant="account"
+              primaryActionLabel="Manage"
+              href="/actions/user-accounts"
+            />
+            <NewActionCard
+              title="Pro Users"
+              description="View and manage premium 'Pro' user accounts and subscriptions."
+              imageHint="premium star"
+              actionIcon={Star}
+              cardVariant="account"
+              primaryActionLabel="Manage"
+              href="/actions/pro-users"
+            />
+             <NewActionCard
+              title="API in Use"
+              description="Monitor the status and usage of currently active APIs."
+              imageHint="api connection"
+              actionIcon={PlugZap}
+              cardVariant="server"
+              primaryActionLabel="Monitor"
+              href="/actions/api-status"
+            />
+            <NewActionCard
+              title="API Testing"
+              description="Perform tests and diagnostics on various API endpoints for stability."
+              imageHint="test development"
+              actionIcon={TestTube2}
+              cardVariant="server"
+              primaryActionLabel="Test"
+              href="/actions/api-testing"
+            />
+            <NewActionCard
+              title="Account Changes (User)"
+              description="Review recent modifications and updates to user accounts."
+              imageHint="user settings"
+              actionIcon={UserCog}
+              cardVariant="account"
+              primaryActionLabel="Review"
+              href="/actions/account-changes"
+            />
+            <NewActionCard
+              title="Add Notifications"
+              description="Create and dispatch platform-wide notifications to users."
+              imageHint="alert message"
+              actionIcon={BellPlus}
+              cardVariant="communication"
+              primaryActionLabel="Create"
+              href="/actions/add-notifications"
+            />
+            <NewActionCard
+              title="Website Traffic"
+              description="Analyze data on website visits, user flow, and engagement patterns."
+              imageHint="analytics traffic"
+              actionIcon={ActivityIconLucide}
+              cardVariant="data"
+              primaryActionLabel="Analyze"
+              href="/actions/website-traffic"
+            />
+            <NewActionCard
+              title="AI Usage"
+              description="Track metrics and patterns related to AI feature utilization."
+              imageHint="ai brain"
+              actionIcon={BrainCircuit}
+              cardVariant="data"
+              primaryActionLabel="Track"
+              href="/actions/ai-usage"
+            />
+          </div>
+        </section>
 
-          {/* Actions Section */}
-          <section className="space-y-6">
+        {/* Tasks Assigned to You Section */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Sparkles className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-semibold">Quick Actions & Management</h2>
+              <Pin className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-2xl font-semibold">Tasks assigned to you</h2>
+              <ChevronDown className="h-5 w-5 text-muted-foreground cursor-pointer" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <NewActionCard
-                title="Create Subject Notes"
-                description="Draft and organize comprehensive notes for various academic subjects."
-                imageHint="notes education"
-                actionIcon={NotebookPen}
-                cardVariant="page"
-                primaryActionLabel="Create"
-                href="/actions/create-subject-notes" 
+            <Button variant="ghost" size="sm" asChild className="text-sm text-muted-foreground hover:text-foreground">
+              <Link href="/tasks">
+                View all
+              </Link>
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {homePageTasksData.map(task => (
+              <TaskCard
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                project={task.project}
+                dueDate={task.dueDate}
+                initialCompleted={task.initialCompleted}
               />
-              <NewActionCard
-                title="Add Subject"
-                description="Introduce a new subject area or course to the learning platform."
-                imageHint="subject plus"
-                actionIcon={PlusCircleIcon}
-                cardVariant="task"
-                primaryActionLabel="Add"
-                href="/actions/add-subject"
-              />
-              <NewActionCard
-                title="View Reported Bugs"
-                description="Track, review, and manage software bugs reported by users."
-                imageHint="bug report"
-                actionIcon={Bug}
-                cardVariant="data"
-                primaryActionLabel="View"
-                href="/actions/view-bugs"
-              />
-              <NewActionCard
-                title="Edit About Us"
-                description="Update the 'About Us' page content for the platform."
-                imageHint="content edit"
-                actionIcon={FileText}
-                cardVariant="content"
-                primaryActionLabel="Edit"
-                href="/actions/edit-about-us"
-              />
-               <NewActionCard
-                title="Add Facts"
-                description="Contribute interesting and relevant facts to the platform's knowledge base."
-                imageHint="fact list"
-                actionIcon={ListPlus}
-                cardVariant="task"
-                primaryActionLabel="Add"
-                href="/actions/add-facts"
-              />
-              <NewActionCard
-                title="Performance Tracking"
-                description="Analyze user performance metrics and engagement statistics."
-                imageHint="analytics chart"
-                actionIcon={BarChart3}
-                cardVariant="data"
-                primaryActionLabel="Analyze"
-                href="/actions/performance-tracking"
-              />
-              <NewActionCard
-                title="Add Questions to QB"
-                description="Expand the question bank by adding new questions and answers."
-                imageHint="question bank"
-                actionIcon={FileQuestion}
-                cardVariant="page"
-                primaryActionLabel="Add"
-                href="/actions/add-questions"
-              />
-              <NewActionCard
-                title="NCERT Sources"
-                description="Manage and reference NCERT educational materials and resources."
-                imageHint="education book"
-                actionIcon={Library}
-                cardVariant="content"
-                primaryActionLabel="Manage"
-                href="/actions/ncert-sources"
-              />
-              <NewActionCard
-                title="User's Account Data"
-                description="Access and manage individual user account details and settings."
-                imageHint="user profile"
-                actionIcon={Users}
-                cardVariant="account"
-                primaryActionLabel="Manage"
-                href="/actions/user-accounts"
-              />
-              <NewActionCard
-                title="Pro Users"
-                description="View and manage premium 'Pro' user accounts and subscriptions."
-                imageHint="premium star"
-                actionIcon={Star}
-                cardVariant="account"
-                primaryActionLabel="Manage"
-                href="/actions/pro-users"
-              />
-               <NewActionCard
-                title="API in Use"
-                description="Monitor the status and usage of currently active APIs."
-                imageHint="api connection"
-                actionIcon={PlugZap}
-                cardVariant="server"
-                primaryActionLabel="Monitor"
-                href="/actions/api-status"
-              />
-              <NewActionCard
-                title="API Testing"
-                description="Perform tests and diagnostics on various API endpoints for stability."
-                imageHint="test development"
-                actionIcon={TestTube2}
-                cardVariant="server"
-                primaryActionLabel="Test"
-                href="/actions/api-testing"
-              />
-              <NewActionCard
-                title="Account Changes (User)"
-                description="Review recent modifications and updates to user accounts."
-                imageHint="user settings"
-                actionIcon={UserCog}
-                cardVariant="account"
-                primaryActionLabel="Review"
-                href="/actions/account-changes"
-              />
-              <NewActionCard
-                title="Add Notifications"
-                description="Create and dispatch platform-wide notifications to users."
-                imageHint="alert message"
-                actionIcon={BellPlus}
-                cardVariant="communication"
-                primaryActionLabel="Create"
-                href="/actions/add-notifications"
-              />
-              <NewActionCard
-                title="Website Traffic"
-                description="Analyze data on website visits, user flow, and engagement patterns."
-                imageHint="analytics traffic"
-                actionIcon={ActivityIconLucide}
-                cardVariant="data"
-                primaryActionLabel="Analyze"
-                href="/actions/website-traffic"
-              />
-              <NewActionCard
-                title="AI Usage"
-                description="Track metrics and patterns related to AI feature utilization."
-                imageHint="ai brain"
-                actionIcon={BrainCircuit}
-                cardVariant="data"
-                primaryActionLabel="Track"
-                href="/actions/ai-usage"
-              />
-            </div>
-          </section>
+            ))}
+          </div>
+        </section>
 
-          {/* Tasks Assigned to You Section */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Pin className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-2xl font-semibold">Tasks assigned to you</h2>
-                <ChevronDown className="h-5 w-5 text-muted-foreground cursor-pointer" />
-              </div>
-              <Button variant="ghost" size="sm" asChild className="text-sm text-muted-foreground hover:text-foreground">
-                <Link href="/tasks">
-                  View all
-                </Link>
-              </Button>
+        {/* Latest Activity Section */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <h2 className="text-2xl font-semibold">Latest activity</h2>
+              <ArrowUpRight className="h-5 w-5 text-muted-foreground cursor-pointer" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {homePageTasksData.map(task => (
-                <TaskCard
-                  key={task.id}
-                  id={task.id}
-                  title={task.title}
-                  project={task.project}
-                  dueDate={task.dueDate}
-                  initialCompleted={task.initialCompleted}
-                />
-              ))}
-            </div>
-          </section>
-
-          {/* Latest Activity Section */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <h2 className="text-2xl font-semibold">Latest activity</h2>
-                <ArrowUpRight className="h-5 w-5 text-muted-foreground cursor-pointer" />
-              </div>
-              <Button variant="ghost" size="sm" asChild className="text-sm text-muted-foreground hover:text-foreground">
-                <Link href="/activity">
-                  View all
-                </Link>
-              </Button>
-            </div>
-            <div className="p-6 bg-card rounded-lg shadow-sm">
-              <p className="text-muted-foreground">Your latest activity will appear here...</p>
-              {/* In a real app, this would be a feed of activities */}
-            </div>
-          </section>
-        </main>
-      </div>
-    );
-  }
-
-  // Fallback: if not authenticated and no dialogs are explicitly shown,
-  // ensure login dialog is presented. This handles edge cases.
-  if (!showLoginDialog && !showChangePasswordDialog) {
-      // This state should ideally be caught by the useEffect, but as a safeguard:
-      return (
-        <LoginDialog
-            isOpen={true} // Force open
-            onOpenChange={(isOpen) => {
-                if (!isOpen && !isAuthenticated) { /* Keep it mandatory */ }
-                 else { setShowLoginDialog(isOpen); }
-            }}
-            onLoginSuccess={handleLoginSuccess}
-            onFirstTimeLogin={handleFirstTimeLogin}
-        />
-      );
-  }
-  
-  return null; // Or a loading spinner, or some other placeholder
+            <Button variant="ghost" size="sm" asChild className="text-sm text-muted-foreground hover:text-foreground">
+              <Link href="/activity">
+                View all
+              </Link>
+            </Button>
+          </div>
+          <div className="p-6 bg-card rounded-lg shadow-sm">
+            <p className="text-muted-foreground">Your latest activity will appear here...</p>
+            {/* In a real app, this would be a feed of activities */}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 }
-
