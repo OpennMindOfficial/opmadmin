@@ -6,6 +6,7 @@ const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
 const BASEROW_TEAM_TABLE_ID = '551777'; 
 const BASEROW_CEO_TABLE_ID = '552544';
+const BASEROW_SUBJECT_NOTES_TABLE_ID = '551284';
 
 export interface UserRecord {
   id: number;
@@ -27,6 +28,15 @@ export interface CeoUserRecord {
   Email: string;
   Password?: string;
   'Last active'?: string;
+  [key: string]: any;
+}
+
+export interface SubjectNoteRecord {
+  id: number;
+  order: string;
+  Subject?: string;
+  Chapter?: string;
+  Notes?: string;
   [key: string]: any;
 }
 
@@ -138,6 +148,38 @@ export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRec
     return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
   } catch (error) {
     console.error(`Failed to update CEO record ${rowId} in CEO table:`, error);
+    return null;
+  }
+}
+
+// Subject Notes Functions
+export async function fetchSubjectNotes(): Promise<SubjectNoteRecord[]> {
+  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200`; // Adjust size as needed
+  try {
+    const data = await makeBaserowRequest(endpoint, 'GET');
+    return (data?.results || []) as SubjectNoteRecord[];
+  } catch (error) {
+    console.error('Failed to fetch subject notes:', error);
+    return [];
+  }
+}
+
+export async function createSubjectNote(noteData: { Subject?: string; Chapter?: string; Notes?: string }): Promise<SubjectNoteRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true`;
+  try {
+    return await makeBaserowRequest(endpoint, 'POST', noteData);
+  } catch (error) {
+    console.error('Failed to create subject note:', error);
+    return null;
+  }
+}
+
+export async function updateSubjectNote(rowId: number, updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order'>>): Promise<SubjectNoteRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/?user_field_names=true`;
+  try {
+    return await makeBaserowRequest(endpoint, 'PATCH', updates);
+  } catch (error) {
+    console.error(`Failed to update subject note ${rowId}:`, error);
     return null;
   }
 }
