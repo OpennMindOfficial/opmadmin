@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
 import { TaskCard } from '@/components/dashboard/task-card';
-import { Sparkles, ChevronDown, Pin, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit, Loader2 } from 'lucide-react';
+import { Sparkles, ChevronDown, Pin, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit, Loader2, GanttChartSquare, DatabaseZap, Edit3, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { LoginDialog } from '@/components/auth/LoginDialog';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
@@ -35,7 +35,7 @@ export default function DashboardRedesignPage() {
   const [isCeoLoggedIn, setIsCeoLoggedIn] = useState(false);
 
   useEffect(() => {
-    setIsClient(true); // Indicate client-side has mounted
+    setIsClient(true); 
 
     const storedEmail = localStorage.getItem('currentUserEmail');
     const storedFullName = localStorage.getItem('currentUserFullName');
@@ -50,7 +50,7 @@ export default function DashboardRedesignPage() {
       setIsCeoLoggedIn(storedIsCeo);
 
       if (!storedIsCeo) {
-        updateUserLastActive(userId)
+        updateUserLastActive(userId) // No need to pass email if userId is primary
           .then(res => {
             if (res.success && res.userName) {
               setCurrentUserFullName(res.userName);
@@ -61,19 +61,19 @@ export default function DashboardRedesignPage() {
           .catch(err => console.error("Failed to update last active time on revisit:", err));
       }
     } else {
-      // This logic will run if no persisted login is found
-      // setShowLoginDialog(true) is already the default state
+      setIsAuthenticated(false); // Explicitly set for clarity
+      setShowLoginDialog(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
   useEffect(() => {
-    if (!isClient) return; // Don't run this effect on server or before client mount
+    if (!isClient) return; 
 
-    if (!isAuthenticated && !showChangePasswordDialog && !localStorage.getItem('currentUserEmail')) {
+    if (!isAuthenticated && !showChangePasswordDialog) {
       setShowLoginDialog(true);
-    } else if (isAuthenticated || localStorage.getItem('currentUserEmail')) {
+    } else if (isAuthenticated) {
       setShowLoginDialog(false);
     }
   }, [isAuthenticated, showChangePasswordDialog, isClient]);
@@ -134,7 +134,7 @@ export default function DashboardRedesignPage() {
     setIsCeoLoggedIn(false);
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
-    if (userId) localStorage.setItem('userId', userId.toString()); // Ensure userId is stored if available
+    if (userId) localStorage.setItem('userId', userId.toString());
     localStorage.removeItem('isCeoLoggedIn');
   };
 
@@ -146,7 +146,7 @@ export default function DashboardRedesignPage() {
     localStorage.removeItem('userRole');
     localStorage.removeItem('authMethod');
     setIsAuthenticated(false);
-    setShowLoginDialog(true); // Show login dialog after logout
+    setShowLoginDialog(true); 
     setShowChangePasswordDialog(false);
     setCurrentUserEmailForPasswordChange('');
     setCurrentUserIdForPasswordChange(null);
@@ -163,20 +163,19 @@ export default function DashboardRedesignPage() {
     );
   }
 
-  if (showChangePasswordDialog && (currentUserEmailForPasswordChange || currentUserIdForPasswordChange)) {
+  if (showChangePasswordDialog && (currentUserIdForPasswordChange)) {
     return (
       <ChangePasswordDialog
         isOpen={showChangePasswordDialog}
         onOpenChange={(isOpen) => {
           setShowChangePasswordDialog(isOpen);
-          if (!isOpen && !isAuthenticated && !localStorage.getItem('currentUserEmail')) {
+          if (!isOpen && !isAuthenticated) {
             setShowLoginDialog(true);
           }
         }}
         onPasswordChangedSuccess={handlePasswordChangedSuccess}
-        // Pass userId to ChangePasswordDialog as it's more reliable
         userId={currentUserIdForPasswordChange}
-        userEmail={currentUserEmailForPasswordChange} // Keep for compatibility if needed
+        userEmail={currentUserEmailForPasswordChange} 
         userName={currentUserFullName}
       />
     );
@@ -187,7 +186,12 @@ export default function DashboardRedesignPage() {
       <LoginDialog
         isOpen={showLoginDialog}
         onOpenChange={(isOpen) => {
-          setShowLoginDialog(isOpen);
+          // Prevent closing the dialog unless authenticated
+          if (!isOpen && !isAuthenticated) {
+            setShowLoginDialog(true); 
+          } else {
+            setShowLoginDialog(isOpen);
+          }
         }}
         onLoginSuccess={handleLoginSuccess}
         onFirstTimeLogin={handleFirstTimeLogin}
@@ -429,7 +433,6 @@ export default function DashboardRedesignPage() {
     );
   }
 
-  // Fallback loading state
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
        <p className="text-muted-foreground">Initializing OpennMind...</p>
@@ -437,5 +440,3 @@ export default function DashboardRedesignPage() {
     </div>
   );
 }
-
-    

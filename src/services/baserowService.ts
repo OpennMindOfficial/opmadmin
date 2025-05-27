@@ -4,15 +4,30 @@
 
 const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
-const BASEROW_TEAM_TABLE_ID = '552726'; 
-const BASEROW_CEO_TABLE_ID = '552544';
-const BASEROW_SUBJECT_NOTES_TABLE_ID = '552726';
 
-// New Table IDs from user request
+// Corrected Table ID for team/user login and general user data
+const BASEROW_TEAM_TABLE_ID = '551777'; 
+
+// Table ID for CEO specific login
+const BASEROW_CEO_TABLE_ID = '552544';
+
+// Table ID for Subject Notes (assuming this was correctly set for notes functionality)
+const BASEROW_SUBJECT_NOTES_TABLE_ID = '552726'; 
+
+// Table IDs for Management Pages
 const BASEROW_ADD_SUBJECT_TABLE_ID = '548576';
 const BASEROW_BUG_REPORTS_TABLE_ID = '542797';
 const BASEROW_ABOUT_US_TABLE_ID = '542795';
-// Other table IDs will be added as their pages are implemented
+// Other table IDs from previous implementations:
+// const BASEROW_FACTS_TABLE_ID = '542791';
+// const BASEROW_PERFORMANCE_USER_MAIN_TABLE_ID = '546405';
+// const BASEROW_PERFORMANCE_SUBJECT_TABLE_ID = '546409';
+// const BASEROW_QUESTIONS_QB_TABLE_ID = '552908';
+// const BASEROW_NCERT_SOURCES_TABLE_ID = '552910';
+// const BASEROW_USER_ACCOUNTS_DATA_TABLE_ID = '542785'; // Protected
+// const BASEROW_PRO_USERS_DATA_TABLE_ID = '552928'; // Protected
+// const BASEROW_PAGE_PASSWORD_TABLE_ID = '552919';
+// const BASEROW_ACCESS_LOG_TABLE_ID = '552920';
 
 
 export interface UserRecord {
@@ -51,14 +66,14 @@ export interface SubjectNoteRecord {
   [key: string]: any;
 }
 
-// New Record Interfaces
+// Record Interfaces for Management Pages
 export interface AddSubjectBaserowRecord {
   id: number;
   order: string;
   Subject: string;
   Topics?: string;
   Chapters?: string;
-  'Topics divided'?: string; // Field name as in Baserow
+  'Topics divided'?: string; 
   [key: string]: any;
 }
 
@@ -73,7 +88,7 @@ export interface BugReportBaserowRecord {
 }
 
 export interface AboutUsBaserowRecord {
-  id: number; // Usually there's one row for this in a config table
+  id: number; 
   order: string;
   Mission: string;
   Story: string;
@@ -129,7 +144,7 @@ async function makeBaserowRequest(
     }
     
     const responseData = await response.json();
-    console.log(`[BaserowService] Response Data for ${method} ${url}:`, JSON.stringify(responseData, null, 2).substring(0, 500) + '...'); // Log snippet
+    console.log(`[BaserowService] Response Data for ${method} ${url}:`, JSON.stringify(responseData, null, 2).substring(0, 500) + '...'); 
     return responseData;
 
   } catch (error: any) {
@@ -264,7 +279,7 @@ export async function updateSubjectNote(
     return result; 
   } catch (error) {
     console.error(`[BaserowService] Failed to update subject note ${rowId} in table ${BASEROW_SUBJECT_NOTES_TABLE_ID} (service level):`, error);
-    throw error; // Re-throw to be handled by the action
+    throw error; 
   }
 }
 
@@ -279,7 +294,7 @@ export async function deleteSubjectNote(rowId: number): Promise<boolean> {
   }
 }
 
-// --- New Service Functions for Management Pages ---
+// --- Service Functions for Management Pages ---
 
 // Add Subject Service Functions
 export async function fetchAllSubjects(): Promise<AddSubjectBaserowRecord[]> {
@@ -316,8 +331,7 @@ export async function fetchAllBugReports(): Promise<BugReportBaserowRecord[]> {
 }
 
 // Edit About Us Service Functions
-// Assuming there's only one row or a known row ID for About Us content
-export async function fetchAboutUsData(rowId: number = 1): Promise<AboutUsBaserowRecord | null> { // Default to row ID 1 if not specified
+export async function fetchAboutUsData(rowId: number = 1): Promise<AboutUsBaserowRecord | null> { 
   const endpoint = `/api/database/rows/table/${BASEROW_ABOUT_US_TABLE_ID}/${rowId}/?user_field_names=true`;
   try {
     const data = await makeBaserowRequest(endpoint);
@@ -337,5 +351,3 @@ export async function updateAboutUsData(rowId: number = 1, contentData: Pick<Abo
     return null;
   }
 }
-
-    

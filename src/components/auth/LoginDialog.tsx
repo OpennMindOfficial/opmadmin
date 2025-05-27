@@ -19,8 +19,8 @@ import { verifyLogin, verifyCeoLogin } from '@/app/actions/authActions';
 interface LoginDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onLoginSuccess: (email: string, userName: string, isCeo?: boolean) => void;
-  onFirstTimeLogin: (email: string, userName: string) => void; 
+  onLoginSuccess: (email: string, userName: string, userId?: number, userRole?: string, isCeo?: boolean, authMethod?: string) => void;
+  onFirstTimeLogin: (email: string, userName: string, userId?: number, userRole?: string, authMethod?: string) => void;
 }
 
 const generateCaptcha = (length: number = 6): string => {
@@ -51,14 +51,10 @@ export function LoginDialog({
       setCaptchaCode(generateCaptcha());
       setCaptchaInput(''); 
       setError(''); 
-      // Reset view to team login if dialog reopens, unless specifically switched
-      // setIsCeoLoginView(false); // Removed to keep CEO view if user clicks away and back
     } else {
-        // Reset fields when dialog closes
         setEmail('');
         setPassword('');
         setCaptchaInput('');
-        // setIsCeoLoginView(false); // Keep this if you want it to always reset
     }
   }, [isOpen]); 
 
@@ -98,19 +94,10 @@ export function LoginDialog({
       }
 
       if (result.success && result.userEmail && result.userName !== undefined) {
-        if (result.firstTimeLogin && !result.isCeo) { // First time login only for team members
-          onOpenChange(false); 
-          onFirstTimeLogin(result.userEmail, result.userName); 
+        if (result.firstTimeLogin && !result.isCeo) { 
+          onFirstTimeLogin(result.userEmail, result.userName, result.userId, result.userRole, result.authMethod);
         } else {
-          localStorage.setItem('currentUserEmail', result.userEmail);
-          localStorage.setItem('currentUserFullName', result.userName); 
-          if(result.isCeo) {
-            localStorage.setItem('isCeoLoggedIn', 'true');
-          } else {
-            localStorage.removeItem('isCeoLoggedIn'); // Ensure it's removed for team login
-          }
-          onOpenChange(false); 
-          onLoginSuccess(result.userEmail, result.userName, result.isCeo); 
+          onLoginSuccess(result.userEmail, result.userName, result.userId, result.userRole, result.isCeo, result.authMethod); 
         }
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');
@@ -144,7 +131,11 @@ export function LoginDialog({
   
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent 
+        className="sm:max-w-[425px]"
+        onInteractOutside={(e) => e.preventDefault()} 
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{isCeoLoginView ? "CEO Sign In" : "Welcome Back!"}</DialogTitle>
           <DialogDescription>
