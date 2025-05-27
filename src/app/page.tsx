@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
 import { TaskCard } from '@/components/dashboard/task-card';
-import { Sparkles, ChevronDown, Pin, Plus, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit } from 'lucide-react'; // Renamed PlusCircle to PlusCircleIcon, Activity to ActivityIconLucide
+import { Sparkles, ChevronDown, Pin, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit } from 'lucide-react';
 import Link from 'next/link';
 import { LoginDialog } from '@/components/auth/LoginDialog';
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'; // Import new dialog
 
 // Mock data for "Tasks assigned to you" on the homepage
 const homePageTasksData = [
@@ -21,16 +22,38 @@ const homePageTasksData = [
 
 export default function DashboardRedesignPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showLoginDialog, setShowLoginDialog] = useState(true);
+  const [showLoginDialog, setShowLoginDialog] = useState(true); // Start with login dialog open
+
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
+  const [currentUserEmailForPasswordChange, setCurrentUserEmailForPasswordChange] = useState('');
+
 
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
-    setShowLoginDialog(false);
+    setShowLoginDialog(false); // Close login dialog
+    setShowChangePasswordDialog(false); // Ensure change password dialog is also closed
   };
+
+  const handleFirstTimeLogin = (email: string) => {
+    setCurrentUserEmailForPasswordChange(email);
+    setShowChangePasswordDialog(true);
+    // Login dialog is already closed by its own logic before calling this
+  };
+
+  const handlePasswordChangedSuccess = () => {
+    setIsAuthenticated(true); // Now fully authenticated
+    setShowChangePasswordDialog(false);
+    // Could show a toast message here: "Password changed successfully!"
+  };
+
 
   useEffect(() => {
     // This effect can be used to manage dialog visibility based on auth state if needed
-  }, [isAuthenticated, showLoginDialog]);
+    // Forcing login dialog if not authenticated and no other dialog is up
+    if (!isAuthenticated && !showChangePasswordDialog) {
+        setShowLoginDialog(true);
+    }
+  }, [isAuthenticated, showLoginDialog, showChangePasswordDialog]);
 
 
   if (!isAuthenticated && showLoginDialog) {
@@ -40,17 +63,32 @@ export default function DashboardRedesignPage() {
         onOpenChange={(isOpen) => {
           if (!isOpen && !isAuthenticated) {
             // User tried to close dialog without logging in.
-            // Keep dialog mandatory by not setting showLoginDialog to false.
+            // To make it strictly mandatory, don't change showLoginDialog.
+            // For a slightly more flexible approach (allowing closure but keeping unauth state):
+            // setShowLoginDialog(isOpen); 
           } else {
             setShowLoginDialog(isOpen);
           }
         }}
         onLoginSuccess={handleLoginSuccess}
+        onFirstTimeLogin={handleFirstTimeLogin}
+      />
+    );
+  }
+  
+  if (showChangePasswordDialog && currentUserEmailForPasswordChange) {
+    return (
+      <ChangePasswordDialog
+        isOpen={showChangePasswordDialog}
+        onOpenChange={setShowChangePasswordDialog}
+        onPasswordChangedSuccess={handlePasswordChangedSuccess}
+        userEmail={currentUserEmailForPasswordChange}
       />
     );
   }
 
-  if (isAuthenticated || !showLoginDialog) {
+
+  if (isAuthenticated) { // Only render page if fully authenticated
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <NewTopNav />
@@ -272,6 +310,7 @@ export default function DashboardRedesignPage() {
             </div>
             <div className="p-6 bg-card rounded-lg shadow-sm">
               <p className="text-muted-foreground">Your latest activity will appear here...</p>
+              {/* In a real app, this would be a feed of activities */}
             </div>
           </section>
         </main>
@@ -279,18 +318,23 @@ export default function DashboardRedesignPage() {
     );
   }
 
-  return (
-     <LoginDialog
-        isOpen={!isAuthenticated}
-        onOpenChange={(isOpen) => {
-          if (!isOpen && !isAuthenticated) {
-            // User trying to close unauthenticated dialog
-            // Potentially add a small shake animation or visual cue here if desired
-            return;
-          }
-          setShowLoginDialog(isOpen);
-        }}
-        onLoginSuccess={handleLoginSuccess}
-      />
-  );
+  // Fallback: if not authenticated and no dialogs are explicitly shown,
+  // ensure login dialog is presented. This handles edge cases.
+  if (!showLoginDialog && !showChangePasswordDialog) {
+      // This state should ideally be caught by the useEffect, but as a safeguard:
+      return (
+        <LoginDialog
+            isOpen={true} // Force open
+            onOpenChange={(isOpen) => {
+                if (!isOpen && !isAuthenticated) { /* Keep it mandatory */ }
+                 else { setShowLoginDialog(isOpen); }
+            }}
+            onLoginSuccess={handleLoginSuccess}
+            onFirstTimeLogin={handleFirstTimeLogin}
+        />
+      );
+  }
+  
+  return null; // Or a loading spinner, or some other placeholder
 }
+
