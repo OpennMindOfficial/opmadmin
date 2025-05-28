@@ -75,7 +75,7 @@ export interface CeoUserRecord extends BaseRecord {
 }
 
 export interface SubjectNoteRecord extends BaseRecord {
-  ID?: number | string; 
+  ID?: number | string; // User-defined ID
   Subject?: string;
   Chapter?: string;
   Notes?: string;
@@ -294,7 +294,7 @@ async function makeBaserowRequest(
     console.log(`[BaserowService] Response Data for ${method} ${url}:`, responsePreview.substring(0, 500) + (responsePreview.length > 500 ? '...' : '')); 
     return responseData;
 
-  } catch (error: any) { 
+  } catch (error: any) {
     console.error(`[BaserowService] CRITICAL Error in makeBaserowRequest to ${url} with method ${method}:`, error.message, error.stack);
     throw error; 
   }
@@ -400,7 +400,7 @@ export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRec
 
 // Subject Notes Functions (Table BASEROW_SUBJECT_NOTES_TABLE_ID)
 export async function fetchSubjectNotes(): Promise<SubjectNoteRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`; 
+  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200`; 
   console.log(`--- Service: fetchSubjectNotes (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}) ---`);
   try {
     const data = await makeBaserowRequest(endpoint, 'GET');
@@ -461,7 +461,7 @@ export async function deleteSubjectNote(rowId: number): Promise<boolean> {
 
 // Add Subject Service Functions (Table BASEROW_ADD_SUBJECT_TABLE_ID)
 export async function fetchAllSubjects(): Promise<AddSubjectBaserowRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_ADD_SUBJECT_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_ADD_SUBJECT_TABLE_ID}/?user_field_names=true&size=200`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as AddSubjectBaserowRecord[];
@@ -483,7 +483,7 @@ export async function createNewSubject(subjectData: Omit<AddSubjectBaserowRecord
 
 // View Reported Bugs Service Functions (Table BASEROW_BUG_REPORTS_TABLE_ID)
 export async function fetchAllBugReports(): Promise<BugReportBaserowRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_BUG_REPORTS_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_BUG_REPORTS_TABLE_ID}/?user_field_names=true&size=200`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as BugReportBaserowRecord[];
@@ -523,7 +523,7 @@ export interface FetchFactsResponse {
   results: FactRecord[];
 }
 export async function fetchFacts(page: number = 1, limit: number = 20): Promise<FetchFactsResponse> {
-  const endpoint = `/api/database/rows/table/${BASEROW_FACTS_TABLE_ID}/?user_field_names=true&size=${limit}&page=${page}&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_FACTS_TABLE_ID}/?user_field_names=true&size=${limit}&page=${page}`;
   console.log(`[BaserowService] Fetching facts from endpoint: ${endpoint}`);
   try {
     const data = await makeBaserowRequest(endpoint);
@@ -548,7 +548,7 @@ export async function createFact(factData: Omit<FactRecord, 'id' | 'order' | 'cr
 
 // --- Questions Service Functions (Table BASEROW_QUESTIONS_TABLE_ID) ---
 export async function fetchAllQuestions(): Promise<QuestionRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_QUESTIONS_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_QUESTIONS_TABLE_ID}/?user_field_names=true&size=200`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as QuestionRecord[];
@@ -570,7 +570,7 @@ export async function createQuestionEntry(questionData: Omit<QuestionRecord, 'id
 
 // --- NCERT Sources Service Functions (Table BASEROW_NCERT_SOURCES_TABLE_ID) ---
 export async function fetchAllNcertSources(): Promise<NcertSourceRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_NCERT_SOURCES_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_NCERT_SOURCES_TABLE_ID}/?user_field_names=true&size=200`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as NcertSourceRecord[];
@@ -592,7 +592,7 @@ export async function createNcertSource(sourceData: Omit<NcertSourceRecord, 'id'
 
 // --- API Status Service Functions (Table BASEROW_API_STATUS_TABLE_ID) ---
 export async function fetchAllApiStatuses(): Promise<ApiStatusBaserowRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_API_STATUS_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_API_STATUS_TABLE_ID}/?user_field_names=true&size=200`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as ApiStatusBaserowRecord[];
@@ -621,7 +621,7 @@ export async function createApiStatusEntry(apiStatusData: Partial<Omit<ApiStatus
 
 // --- API Test Config Service Functions (Table BASEROW_API_TEST_CONFIG_TABLE_ID) ---
 export async function fetchApiTestConfigs(): Promise<ApiTestConfigRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_API_TEST_CONFIG_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_API_TEST_CONFIG_TABLE_ID}/?user_field_names=true&size=200`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as ApiTestConfigRecord[];
@@ -671,7 +671,7 @@ export async function createAccessLogEntry(logData: Partial<Omit<AccessLogRecord
 
 // --- Account Changes Log Service Function (Table BASEROW_ACCOUNT_CHANGES_TABLE_ID) ---
 export async function fetchAccountChangesLog(): Promise<AccountChangeLogEntryBaserowRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_ACCOUNT_CHANGES_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`; 
+  const endpoint = `/api/database/rows/table/${BASEROW_ACCOUNT_CHANGES_TABLE_ID}/?user_field_names=true&size=200`; 
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as AccountChangeLogEntryBaserowRecord[];
@@ -685,7 +685,7 @@ export async function fetchAccountChangesLog(): Promise<AccountChangeLogEntryBas
 // --- Service Functions for Protected Data (User Accounts, Pro Users) ---
 const BASEROW_USER_ACCOUNTS_DATA_TABLE_ID = '542785';
 export async function fetchUserAccountData(): Promise<UserRecord[]> {
-    const endpoint = `/api/database/rows/table/${BASEROW_USER_ACCOUNTS_DATA_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+    const endpoint = `/api/database/rows/table/${BASEROW_USER_ACCOUNTS_DATA_TABLE_ID}/?user_field_names=true&size=200`;
     try {
         const data = await makeBaserowRequest(endpoint);
         return (data?.results || []) as UserRecord[];
@@ -698,7 +698,7 @@ export async function fetchUserAccountData(): Promise<UserRecord[]> {
 const BASEROW_PRO_USERS_DATA_TABLE_ID = '552928';
 
 export async function fetchProUsersData(): Promise<ProUserSpecificRecord[]> {
-    const endpoint = `/api/database/rows/table/${BASEROW_PRO_USERS_DATA_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+    const endpoint = `/api/database/rows/table/${BASEROW_PRO_USERS_DATA_TABLE_ID}/?user_field_names=true&size=200`;
     try {
         const data = await makeBaserowRequest(endpoint);
         return (data?.results || []) as ProUserSpecificRecord[];
@@ -710,7 +710,7 @@ export async function fetchProUsersData(): Promise<ProUserSpecificRecord[]> {
 
 // --- Service Function for Performance Tracking Data (Tables BASEROW_PERFORMANCE_USER_MAIN_TABLE_ID, BASEROW_PERFORMANCE_SUBJECT_TABLE_ID) ---
 export async function fetchPerformanceTableData(tableId: string): Promise<Array<PerformanceUserMainDataRecord | PerformanceSubjectDataRecord>> {
-  const endpoint = `/api/database/rows/table/${tableId}/?user_field_names=true&size=200&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${tableId}/?user_field_names=true&size=200`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as Array<PerformanceUserMainDataRecord | PerformanceSubjectDataRecord>;
@@ -722,7 +722,7 @@ export async function fetchPerformanceTableData(tableId: string): Promise<Array<
 
 // --- Notifications Service Functions (Table BASEROW_NOTIFICATIONS_TABLE_ID) ---
 export async function fetchNotifications(): Promise<NotificationBaserowRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_NOTIFICATIONS_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_NOTIFICATIONS_TABLE_ID}/?user_field_names=true&size=200`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as NotificationBaserowRecord[];
