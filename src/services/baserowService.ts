@@ -75,7 +75,7 @@ export interface CeoUserRecord extends BaseRecord {
 }
 
 export interface SubjectNoteRecord extends BaseRecord {
-  ID?: number | string; // User-defined ID, if exists
+  ID?: number | string; 
   Subject?: string;
   Chapter?: string;
   Notes?: string;
@@ -223,8 +223,8 @@ export interface TaskRecord extends BaseRecord {
   Info?: string;
   'assigned to'?: string; 
   Due?: string;
-  Completed?: string; // Comma-separated "Yes" / "No"
-  Date_of_completion?: string; // Comma-separated "userEmail:timestamp"
+  Completed?: string; 
+  Date_of_completion?: string; 
   Date_assigned?: string; 
 }
 
@@ -277,9 +277,10 @@ async function makeBaserowRequest(
       }
       const errorMessage = errorData?.detail || (typeof errorData?.error === 'string' ? errorData.error : errorData?.error?.detail) || `Baserow API request failed: ${responseStatusText}`;
       console.error('[BaserowService] Full API Error:', { status: response.status, statusText: response.statusText, errorDetail: errorMessage, url, method, requestBody: body ? JSON.stringify(body) : 'No Body' });
-      // Attach URL to the error object for better context in server actions
+      
       const error = new Error(errorMessage) as any;
       error.url = url; 
+      error.baserowError = errorData; 
       throw error;
     }
 
@@ -290,10 +291,10 @@ async function makeBaserowRequest(
     
     const responseData = await response.json();
     const responsePreview = JSON.stringify(responseData);
-    console.log(`[BaserowService] Response Data for ${method} ${url}:`, responsePreview.substring(0, 500) + (responsePreview.length > 500 ? '...' : '')); // Increased preview length
+    console.log(`[BaserowService] Response Data for ${method} ${url}:`, responsePreview.substring(0, 500) + (responsePreview.length > 500 ? '...' : '')); 
     return responseData;
 
-  } catch (error: any) {
+  } catch (error: any) { 
     console.error(`[BaserowService] CRITICAL Error in makeBaserowRequest to ${url} with method ${method}:`, error.message, error.stack);
     throw error; 
   }
@@ -432,7 +433,7 @@ export async function updateSubjectNote(
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/?user_field_names=true`;
   console.log(`--- Service: updateSubjectNote (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}, Row ID: ${rowId}) ---`);
   console.log(`[BaserowService] Attempting to PATCH URL: ${BASEROW_API_URL}${endpoint}`);
-  console.log(`[BaserowService] With payload:`, JSON.stringify(updates, null, 2));
+  console.log(`[BaserowService] With payload for updateSubjectNote:`, JSON.stringify(updates, null, 2));
   try {
     const result = await makeBaserowRequest(endpoint, 'PATCH', updates);
     console.log(`[BaserowService] Baserow PATCH response for row ${rowId} in table ${BASEROW_SUBJECT_NOTES_TABLE_ID}:`, result ? JSON.stringify(result, null, 2) : "null/undefined");
@@ -670,7 +671,7 @@ export async function createAccessLogEntry(logData: Partial<Omit<AccessLogRecord
 
 // --- Account Changes Log Service Function (Table BASEROW_ACCOUNT_CHANGES_TABLE_ID) ---
 export async function fetchAccountChangesLog(): Promise<AccountChangeLogEntryBaserowRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_ACCOUNT_CHANGES_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`; // Order by most recent
+  const endpoint = `/api/database/rows/table/${BASEROW_ACCOUNT_CHANGES_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`; 
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as AccountChangeLogEntryBaserowRecord[];
@@ -785,7 +786,7 @@ export async function fetchTaskById(taskId: number): Promise<TaskRecord | null> 
 }
 
 export async function fetchTasksForUser(userEmail: string): Promise<TaskRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200`; // Removed order_by for now
+  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200`; 
   console.log(`--- Service: fetchTasksForUser (Table ID: ${BASEROW_TASKS_TABLE_ID}) for user: ${userEmail} ---`);
   try {
     const data = await makeBaserowRequest(endpoint);
