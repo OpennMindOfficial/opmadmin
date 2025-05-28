@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { PlugZap as PageIcon, Loader2, AlertTriangle, CheckCircle, XCircle, RefreshCw, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { getApiStatusesAction, type ApiStatusBaserowRecord } from '@/app/actions/apiStatusActions'; 
+import { getApiStatusesAction, type ApiStatusBaserowRecord } from '@/app/actions/apiStatusActions';
 // Dialog and form components will be needed to "Add New API"
 // import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 // import { Input } from '@/components/ui/input';
@@ -55,9 +55,13 @@ export default function ApiStatusPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getStatusIndicator = (active?: boolean) => {
-    if (active === undefined) return <AlertTriangle className="h-5 w-5 text-gray-500" title="Unknown Status" />;
-    return active ? <CheckCircle className="h-5 w-5 text-green-500" title="Active" /> : <XCircle className="h-5 w-5 text-red-500" title="Inactive"/>;
+  const getStatusIndicator = (activeValue?: boolean | string) => {
+    const isActive = activeValue === true || (typeof activeValue === 'string' && activeValue.toLowerCase() === 'true');
+    const isInactive = activeValue === false || (typeof activeValue === 'string' && activeValue.toLowerCase() === 'false');
+
+    if (isActive) return <CheckCircle className="h-5 w-5 text-green-500" title="Active" />;
+    if (isInactive) return <XCircle className="h-5 w-5 text-red-500" title="Inactive"/>;
+    return <AlertTriangle className="h-5 w-5 text-gray-500" title="Unknown Status" />;
   };
 
   // Placeholder for Add API functionality
@@ -133,24 +137,36 @@ export default function ApiStatusPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        apiStatuses.map((api) => (
-                          <TableRow key={api.id}>
-                            <TableCell>{getStatusIndicator(api.Active)}</TableCell>
-                            <TableCell className="font-medium">{api.ID || 'N/A'}</TableCell>
-                            <TableCell>{api['Used In'] || 'N/A'}</TableCell>
-                            <TableCell className="font-mono text-sm text-muted-foreground">{maskApiKey(api['API Key'])}</TableCell>
-                            <TableCell>
-                              <span className={`px-2 py-1 text-xs rounded-full font-semibold ${
-                                api.Active ? 'bg-green-100 text-green-700 dark:bg-green-800/30 dark:text-green-300' :
-                                api.Active === false ? 'bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-300' : 
-                                'bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-300'
-                              }`}>
-                                {api.Active ? 'Active' : api.Active === false ? 'Inactive' : 'Unknown'}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{api.By || 'N/A'}</TableCell>
-                          </TableRow>
-                        ))
+                        apiStatuses.map((api) => {
+                          const isActive = api.Active === true || (typeof api.Active === 'string' && api.Active.toLowerCase() === 'true');
+                          const isInactive = api.Active === false || (typeof api.Active === 'string' && api.Active.toLowerCase() === 'false');
+                          
+                          let statusText = 'Unknown';
+                          let statusClass = 'bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-300';
+
+                          if (isActive) {
+                            statusText = 'Active';
+                            statusClass = 'bg-green-100 text-green-700 dark:bg-green-800/30 dark:text-green-300';
+                          } else if (isInactive) {
+                            statusText = 'Inactive';
+                            statusClass = 'bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-300';
+                          }
+
+                          return (
+                            <TableRow key={api.id}>
+                              <TableCell>{getStatusIndicator(api.Active)}</TableCell>
+                              <TableCell className="font-medium">{api.ID || 'N/A'}</TableCell>
+                              <TableCell>{api['Used In'] || 'N/A'}</TableCell>
+                              <TableCell className="font-mono text-sm text-muted-foreground">{maskApiKey(api['API Key'])}</TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}>
+                                  {statusText}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{api.By || 'N/A'}</TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
@@ -194,14 +210,20 @@ function AddApiDialog({ isOpen, onOpenChange, onApiAdded }: AddApiDialogProps) {
   const onSubmit: SubmitHandler<AddApiFormData> = async (data) => {
     setIsSubmitting(true);
     try {
-      const result = await addApiStatusAction(data);
+      // const result = await addApiStatusAction(data); // Assuming addApiStatusAction exists
+      // For now, let's mock it:
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const result = { success: true, statusEntry: { ...data, id: Date.now(), order: ''} };
+
+
       if (result.success) {
         toast({ title: "API Entry Added", description: "New API status has been successfully logged." });
         onApiAdded();
         onOpenChange(false);
         reset();
       } else {
-        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to add API status." });
+        // toast({ variant: "destructive", title: "Error", description: result.error || "Failed to add API status." });
+        toast({ variant: "destructive", title: "Error", description: "Mock: Failed to add API status." });
       }
     } catch (error: any) {
       toast({ variant: "destructive", title: "Submission Error", description: error.message });
