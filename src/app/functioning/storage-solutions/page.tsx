@@ -45,7 +45,7 @@ export default function StorageSolutionsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-muted-foreground">
-                <p>We primarily use [Specify Cloud Provider, e.g., Google Cloud Storage, AWS S3, Firebase Storage] for storing user-uploaded files and application assets.</p>
+                <p>We primarily use Firebase Storage for storing user-uploaded files and application assets.</p>
                 <p>This provides high durability, availability, and scalability for various data types like images, documents, and media files.</p>
               </CardContent>
             </Card>
@@ -60,7 +60,7 @@ export default function StorageSolutionsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-muted-foreground">
-                <p>Long-term archival of data is managed using [Specify Archival Solution, e.g., Glacier] to reduce costs while ensuring data retention.</p>
+                <p>Long-term archival of data is managed using cost-effective solutions to ensure data retention.</p>
                 <p>Regular automated backups of critical data are performed and stored securely in geographically separate locations to prevent data loss.</p>
               </CardContent>
             </Card>

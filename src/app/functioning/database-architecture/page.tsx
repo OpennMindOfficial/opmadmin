@@ -45,7 +45,7 @@ export default function DatabaseArchitecturePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-muted-foreground">
-                <p>Our primary database technology is [Specify Database, e.g., PostgreSQL/MongoDB/Baserow] chosen for its [Specify Reason, e.g., scalability, flexibility, ease of use].</p>
+                <p>Our primary database technology is Baserow, chosen for its flexibility and ease of use.</p>
                 <p>We may also employ caching solutions like Redis for performance optimization of frequently accessed data.</p>
               </CardContent>
             </Card>
