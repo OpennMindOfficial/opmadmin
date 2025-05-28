@@ -10,25 +10,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BellPlus as PageIcon, Send, Loader2, AlertTriangle } from 'lucide-react';
-// Actual actions would be in a separate file e.g., '@/app/actions/notificationActions'
+import { BellPlus as PageIcon, Send, Loader2, AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
+import { getNotificationsAction, sendNotificationAction } from '@/app/actions/notificationActions';
+import type { NotificationBaserowRecord } from '@/services/baserowService';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, parseISO, isValid } from 'date-fns';
-
-// Placeholder type for displayed notifications
-interface DisplayNotificationRecord {
-  id: string;
-  Title: string;
-  Message: string; // Corresponds to "Desc"
-  Target: 'All Users' | 'Specific Group' | 'Specific User';
-  TargetIdentifier?: string;
-  SentAt: string;
-  Status: 'Sent' | 'Scheduled' | 'Failed' | 'Draft';
-}
 
 const notificationSchema = z.object({
   Title: z.string().min(1, "Title is required.").max(100, "Title too long."),
@@ -37,9 +27,9 @@ const notificationSchema = z.object({
     required_error: "Target audience is required.",
   }),
   TargetIdentifier: z.string().optional(),
-  // PageToTakeTo: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
-  // ShownFrom: z.string().optional(), // Consider date picker
-  // ShownTill: z.string().optional(), // Consider date picker
+  PageToTakeTo: z.string().url("Must be a valid URL for redirection.").optional().or(z.literal('')),
+  ShownFrom: z.string().optional(), // Can be enhanced with date picker
+  ShownTill: z.string().optional(), // Can be enhanced with date picker
 }).refine(data => data.Target === 'All Users' || (data.TargetIdentifier && data.TargetIdentifier.trim() !== ''), {
   message: "Target identifier is required if not targeting all users.",
   path: ["TargetIdentifier"],
@@ -49,71 +39,69 @@ type NotificationFormData = z.infer<typeof notificationSchema>;
 
 const formatTimestamp = (timestamp?: string) => {
   if (!timestamp) return 'N/A';
-  try { const date = parseISO(timestamp); return isValid(date) ? format(date, "MMM dd, yyyy hh:mm a") : 'Invalid Date'; }
-  catch { return 'Invalid Date Format'; }
+  try { 
+    const date = parseISO(timestamp); 
+    return isValid(date) ? format(date, "MMM dd, yyyy hh:mm a") : 'Invalid Date'; 
+  } catch { return 'Invalid Date Format'; }
+};
+
+const parseAudience = (shownTo?: string): string => {
+    if (!shownTo) return 'N/A';
+    if (shownTo.startsWith('Group:')) return `Group (${shownTo.substring(6)})`;
+    if (shownTo.startsWith('User:')) return `User (${shownTo.substring(5)})`;
+    return shownTo;
 };
 
 
 export default function AddNotificationsPage() {
   const { toast } = useToast();
-  const [displayedNotifications, setDisplayedNotifications] = useState<DisplayNotificationRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // For fetching existing notifications (mocked)
+  const [notifications, setNotifications] = useState<NotificationBaserowRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit: handleFormSubmit, reset, watch, control, formState: { errors } } = useForm<NotificationFormData>({
     resolver: zodResolver(notificationSchema),
-    defaultValues: { Target: 'All Users', Title: '', Message: '', TargetIdentifier: '' }
+    defaultValues: { Target: 'All Users', Title: '', Message: '', TargetIdentifier: '', PageToTakeTo: '', ShownFrom: '', ShownTill: '' }
   });
   const selectedTarget = watch("Target");
-
-  // --- MOCK DATA & FUNCTIONS ---
-  const [mockNotificationsDb, setMockNotificationsDb] = useState<DisplayNotificationRecord[]>([]);
-
-  const mockGetNotificationsAction = async (): Promise<{ success: boolean, notifications?: DisplayNotificationRecord[], error?: string }> => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return { success: true, notifications: [...mockNotificationsDb].sort((a,b) => new Date(b.SentAt).getTime() - new Date(a.SentAt).getTime()) };
-  };
-
-  const mockSendNotificationAction = async (data: NotificationFormData): Promise<{ success: boolean, notification?: DisplayNotificationRecord, error?: string }> => {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    const newNotif: DisplayNotificationRecord = {
-      id: Date.now().toString(),
-      Title: data.Title,
-      Message: data.Message,
-      Target: data.Target,
-      TargetIdentifier: data.TargetIdentifier,
-      SentAt: new Date().toISOString(),
-      Status: 'Sent', // Mock status
-    };
-    setMockNotificationsDb(prev => [newNotif, ...prev]);
-    return { success: true, notification: newNotif };
-  };
-  // --- END MOCK ---
 
   const fetchNotifications = async () => {
     setIsLoading(true); setError(null);
     try {
-      const result = await mockGetNotificationsAction(); // Using mock
-      if (result.success && result.notifications) setDisplayedNotifications(result.notifications);
-      else { setError(result.error || "Failed to load notifications."); toast({ variant: "destructive", title: "Error", description: result.error || "Failed to load notifications." });}
-    } catch (err: any) { setError(err.message); toast({ variant: "destructive", title: "Error", description: err.message });
-    } finally { setIsLoading(false); }
+      const result = await getNotificationsAction(); 
+      if (result.success && result.notifications) {
+        setNotifications(result.notifications);
+      } else { 
+        setError(result.error || "Failed to load notifications."); 
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to load notifications." });
+      }
+    } catch (err: any) { 
+      setError(err.message); 
+      toast({ variant: "destructive", title: "Error", description: err.message });
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
-  useEffect(() => { fetchNotifications(); }, []); // Initial fetch
+  useEffect(() => { fetchNotifications(); }, []); 
 
   const onSubmit: SubmitHandler<NotificationFormData> = async (data) => {
     setIsSubmitting(true);
     try {
-      const result = await mockSendNotificationAction(data); // Using mock
+      const result = await sendNotificationAction(data); 
       if (result.success && result.notification) {
-        toast({ title: "Notification Sent (Mock)", description: "The notification has been dispatched." });
-        reset(); // Reset form to default values
-        fetchNotifications(); // Re-fetch to update the displayed list
-      } else { toast({ variant: "destructive", title: "Error", description: result.error || "Failed to send notification." }); }
-    } catch (e: any) { toast({ variant: "destructive", title: "Error", description: e.message });
-    } finally { setIsSubmitting(false); }
+        toast({ title: "Notification Sent", description: "The notification has been dispatched." });
+        reset(); 
+        fetchNotifications(); 
+      } else { 
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to send notification." }); 
+      }
+    } catch (e: any) { 
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   return (
@@ -127,9 +115,13 @@ export default function AddNotificationsPage() {
               <h1 className="text-4xl font-bold tracking-tight">Add Notifications</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
-              Create and dispatch platform-wide notifications to users. (Specific Baserow table TBD)
+              Create and dispatch platform-wide notifications to users. (Table ID: 542798)
             </p>
           </div>
+           <Button onClick={fetchNotifications} variant="outline" disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh List
+          </Button>
         </section>
 
         <section className="space-y-6">
@@ -186,7 +178,23 @@ export default function AddNotificationsPage() {
                         </div>
                     )}
                 </div>
-                {/* Other fields like Page to take to, Shown from, etc. can be added here later */}
+                <div>
+                    <Label htmlFor="PageToTakeTo">Redirect URL (Optional)</Label>
+                    <Input id="PageToTakeTo" type="url" {...register('PageToTakeTo')} placeholder="https://example.com/target-page" disabled={isSubmitting} />
+                    {errors.PageToTakeTo && <p className="text-sm text-destructive mt-1">{errors.PageToTakeTo.message}</p>}
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <Label htmlFor="ShownFrom">Show From (YYYY-MM-DD, Optional)</Label>
+                        <Input id="ShownFrom" type="text" {...register('ShownFrom')} placeholder="e.g., 2024-06-01" disabled={isSubmitting} />
+                        {errors.ShownFrom && <p className="text-sm text-destructive mt-1">{errors.ShownFrom.message}</p>}
+                    </div>
+                    <div>
+                        <Label htmlFor="ShownTill">Show Until (YYYY-MM-DD, Optional)</Label>
+                        <Input id="ShownTill" type="text" {...register('ShownTill')} placeholder="e.g., 2024-06-15" disabled={isSubmitting} />
+                        {errors.ShownTill && <p className="text-sm text-destructive mt-1">{errors.ShownTill.message}</p>}
+                    </div>
+                </div>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                   Send Notification
@@ -197,7 +205,7 @@ export default function AddNotificationsPage() {
         </section>
 
         <section className="space-y-6">
-          <h2 className="text-2xl font-semibold">Sent Notifications (Mock Data)</h2>
+          <h2 className="text-2xl font-semibold">Sent Notifications</h2>
            {isLoading ? (
             <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading notifications...</p></div>
           ) : error ? (
@@ -211,24 +219,34 @@ export default function AddNotificationsPage() {
                         <TableRow>
                         <TableHead>Title</TableHead>
                         <TableHead className="w-1/3">Message</TableHead>
-                        <TableHead>Target</TableHead>
-                        <TableHead>Identifier</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Audience</TableHead>
+                        <TableHead>Destination</TableHead>
                         <TableHead>Sent At</TableHead>
+                        <TableHead className="text-right">Views</TableHead>
+                        <TableHead className="text-right">Clicks</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {displayedNotifications.length === 0 ? (
-                        <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">No notifications sent yet.</TableCell></TableRow>
+                        {notifications.length === 0 ? (
+                        <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-10">No notifications sent yet.</TableCell></TableRow>
                         ) : (
-                        displayedNotifications.map((notif) => (
+                        notifications.map((notif) => (
                             <TableRow key={notif.id}>
-                            <TableCell className="font-medium">{notif.Title}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground truncate max-w-md">{notif.Message}</TableCell>
-                            <TableCell>{notif.Target}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{notif.TargetIdentifier || 'N/A'}</TableCell>
-                            <TableCell><span className={`px-2 py-0.5 text-xs rounded-full ${notif.Status === 'Sent' ? 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-300'}`}>{notif.Status}</span></TableCell>
-                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatTimestamp(notif.SentAt)}</TableCell>
+                            <TableCell className="font-medium">{notif.Title || 'N/A'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground truncate max-w-xs">{notif.Desc || 'N/A'}</TableCell>
+                            <TableCell className="text-sm">{parseAudience(notif.ShownTo)}</TableCell>
+                            <TableCell>
+                                {notif.PageToTakeTo ? (
+                                <a href={notif.PageToTakeTo} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center text-sm">
+                                    Link <ExternalLink className="ml-1 h-3 w-3" />
+                                </a>
+                                ) : (
+                                <span className="text-xs text-muted-foreground">N/A</span>
+                                )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatTimestamp(notif.created_on)}</TableCell>
+                            <TableCell className="text-right">{notif.Views ?? 0}</TableCell>
+                            <TableCell className="text-right">{notif.Clicks ?? 0}</TableCell>
                             </TableRow>
                         ))
                         )}

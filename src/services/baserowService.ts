@@ -6,13 +6,13 @@ const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
 
 // Table ID for team/user login and general user data (now used for Account Settings)
-const BASEROW_TEAM_TABLE_ID = '552726'; 
+const BASEROW_TEAM_TABLE_ID = '551777'; 
 
 // Table ID for CEO specific login
 const BASEROW_CEO_TABLE_ID = '552544';
 
 // Table ID for Subject Notes
-const BASEROW_SUBJECT_NOTES_TABLE_ID = '552726'; // User confirmed this is the correct ID for notes.
+const BASEROW_SUBJECT_NOTES_TABLE_ID = '552726'; 
 
 // Table IDs for Management Pages
 const BASEROW_ADD_SUBJECT_TABLE_ID = '548576';
@@ -23,7 +23,9 @@ const BASEROW_QUESTIONS_TABLE_ID = '552908';
 const BASEROW_NCERT_SOURCES_TABLE_ID = '552910';
 const BASEROW_API_STATUS_TABLE_ID = '542782';
 const BASEROW_API_TEST_CONFIG_TABLE_ID = '542783';
-const BASEROW_ACCOUNT_CHANGES_TABLE_ID = '542794'; // New table ID for account changes log
+const BASEROW_ACCOUNT_CHANGES_TABLE_ID = '542794'; 
+const BASEROW_NOTIFICATIONS_TABLE_ID = '542798'; // Added Notifications Table ID
+
 
 // Table IDs for Secure Page Access
 const BASEROW_PAGE_PASSWORD_TABLE_ID = '552919';
@@ -38,6 +40,8 @@ const BASEROW_PERFORMANCE_SUBJECT_TABLE_ID = '546409';
 interface BaseRecord {
   id: number; // Baserow's internal row ID
   order: string;
+  created_on: string; // Baserow automatically adds this
+  updated_on: string; // Baserow automatically adds this
   [key: string]: any;
 }
 
@@ -179,6 +183,17 @@ export interface ProUserSpecificRecord extends UserRecord {
     'Monthly/Yearly'?: 'Monthly' | 'Yearly';
 }
 
+export interface NotificationBaserowRecord extends BaseRecord {
+  Title?: string;
+  Desc?: string;
+  PageToTakeTo?: string;
+  ShownTo?: string;
+  ShownFrom?: string;
+  ShownTill?: string;
+  Views?: number;
+  Clicks?: number;
+}
+
 
 async function makeBaserowRequest(
   endpoint: string,
@@ -239,7 +254,7 @@ async function makeBaserowRequest(
   }
 }
 
-// User Functions (Table 552726 - was BASEROW_TEAM_TABLE_ID)
+// User Functions (Table 551777 - was BASEROW_TEAM_TABLE_ID)
 export async function getUserByEmail(email: string): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
   console.log(`--- Service: getUserByEmail (Table ID: ${BASEROW_TEAM_TABLE_ID}) for email: ${email} ---`);
@@ -340,7 +355,7 @@ export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRec
 
 // Subject Notes Functions (Table 552726 - was BASEROW_SUBJECT_NOTES_TABLE_ID)
 export async function fetchSubjectNotes(): Promise<SubjectNoteRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200`;
+  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`; // Order by most recently updated
   console.log(`--- Service: fetchSubjectNotes (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}) ---`);
   try {
     const data = await makeBaserowRequest(endpoint, 'GET');
@@ -411,7 +426,7 @@ export async function fetchAllSubjects(): Promise<AddSubjectBaserowRecord[]> {
   }
 }
 
-export async function createNewSubject(subjectData: Omit<AddSubjectBaserowRecord, 'id' | 'order'>): Promise<AddSubjectBaserowRecord | null> {
+export async function createNewSubject(subjectData: Omit<AddSubjectBaserowRecord, 'id' | 'order' | 'created_on' | 'updated_on'>): Promise<AddSubjectBaserowRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_ADD_SUBJECT_TABLE_ID}/?user_field_names=true`;
   try {
     return await makeBaserowRequest(endpoint, 'POST', subjectData);
@@ -474,7 +489,7 @@ export async function fetchFacts(page: number = 1, limit: number = 20): Promise<
   }
 }
 
-export async function createFact(factData: Omit<FactRecord, 'id' | 'order' | 'Shares' | 'Downloads'>): Promise<FactRecord | null> {
+export async function createFact(factData: Omit<FactRecord, 'id' | 'order' | 'created_on' | 'updated_on' | 'Shares' | 'Downloads'>): Promise<FactRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_FACTS_TABLE_ID}/?user_field_names=true`;
   const payload = { ...factData, Shares: 0, Downloads: 0 }; 
   try {
@@ -498,7 +513,7 @@ export async function fetchAllQuestions(): Promise<QuestionRecord[]> {
   }
 }
 
-export async function createQuestionEntry(questionData: Omit<QuestionRecord, 'id' | 'order'>): Promise<QuestionRecord | null> {
+export async function createQuestionEntry(questionData: Omit<QuestionRecord, 'id' | 'order' | 'created_on' | 'updated_on'>): Promise<QuestionRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_QUESTIONS_TABLE_ID}/?user_field_names=true`;
   try {
     return await makeBaserowRequest(endpoint, 'POST', questionData);
@@ -520,7 +535,7 @@ export async function fetchAllNcertSources(): Promise<NcertSourceRecord[]> {
   }
 }
 
-export async function createNcertSource(sourceData: Omit<NcertSourceRecord, 'id' | 'order'>): Promise<NcertSourceRecord | null> {
+export async function createNcertSource(sourceData: Omit<NcertSourceRecord, 'id' | 'order' | 'created_on' | 'updated_on'>): Promise<NcertSourceRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_NCERT_SOURCES_TABLE_ID}/?user_field_names=true`;
   try {
     return await makeBaserowRequest(endpoint, 'POST', sourceData);
@@ -542,7 +557,7 @@ export async function fetchAllApiStatuses(): Promise<ApiStatusBaserowRecord[]> {
   }
 }
 
-export async function createApiStatusEntry(apiStatusData: Partial<Omit<ApiStatusBaserowRecord, 'id' | 'order'>>): Promise<ApiStatusBaserowRecord | null> {
+export async function createApiStatusEntry(apiStatusData: Partial<Omit<ApiStatusBaserowRecord, 'id' | 'order' | 'created_on' | 'updated_on'>>): Promise<ApiStatusBaserowRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_API_STATUS_TABLE_ID}/?user_field_names=true`;
   const payload = {
     'ID': apiStatusData.ID,
@@ -588,7 +603,7 @@ export async function fetchFirstPagePassword(identifier?: string): Promise<PageP
   }
 }
 
-export async function createAccessLogEntry(logData: Partial<Omit<AccessLogRecord, 'id' | 'order'>>): Promise<AccessLogRecord | null> {
+export async function createAccessLogEntry(logData: Partial<Omit<AccessLogRecord, 'id' | 'order' | 'created_on' | 'updated_on'>>): Promise<AccessLogRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_ACCESS_LOG_TABLE_ID}/?user_field_names=true`;
   try {
     const payload = {
@@ -653,5 +668,28 @@ export async function fetchPerformanceTableData(tableId: string): Promise<Array<
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch performance data from table ${tableId}:`, error);
     return [];
+  }
+}
+
+// --- Notifications Service Functions (Table 542798) ---
+export async function fetchNotifications(): Promise<NotificationBaserowRecord[]> {
+  const endpoint = `/api/database/rows/table/${BASEROW_NOTIFICATIONS_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return (data?.results || []) as NotificationBaserowRecord[];
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch notifications from table ${BASEROW_NOTIFICATIONS_TABLE_ID}:`, error);
+    return [];
+  }
+}
+
+export async function createNotification(notificationData: Omit<NotificationBaserowRecord, 'id' | 'order' | 'created_on' | 'updated_on' | 'Views' | 'Clicks'>): Promise<NotificationBaserowRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_NOTIFICATIONS_TABLE_ID}/?user_field_names=true`;
+  const payload = { ...notificationData, Views: 0, Clicks: 0 };
+  try {
+    return await makeBaserowRequest(endpoint, 'POST', payload);
+  } catch (error) {
+    console.error(`[BaserowService] Failed to create notification in table ${BASEROW_NOTIFICATIONS_TABLE_ID}:`, error);
+    throw error;
   }
 }
