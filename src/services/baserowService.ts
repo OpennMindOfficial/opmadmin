@@ -2,6 +2,8 @@
 // src/services/baserowService.ts
 'use server';
 
+import { formatISO } from 'date-fns';
+
 const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
 
@@ -27,7 +29,7 @@ const BASEROW_ACCOUNT_CHANGES_TABLE_ID = '542794';
 const BASEROW_NOTIFICATIONS_TABLE_ID = '542798';
 const BASEROW_WEBSITE_TRAFFIC_TABLE_ID = '542800';
 const BASEROW_AI_USAGE_TABLE_ID = '553904';
-const BASEROW_TASKS_TABLE_ID = '552540'; // New Tasks Table ID
+const BASEROW_TASKS_TABLE_ID = '552540';
 
 
 // Table IDs for Secure Page Access
@@ -43,8 +45,8 @@ const BASEROW_PERFORMANCE_SUBJECT_TABLE_ID = '546409';
 interface BaseRecord {
   id: number; // Baserow's internal row ID
   order: string;
-  created_on: string; // Baserow automatically adds this
-  updated_on: string; // Baserow automatically adds this
+  created_on: string; 
+  updated_on: string; 
   [key: string]: any;
 }
 
@@ -201,8 +203,8 @@ export interface NotificationBaserowRecord extends BaseRecord {
 
 export interface WebsiteTrafficBaserowRecord extends BaseRecord {
   Visits?: number;
-  Date?: string; // Assuming date string like 'YYYY-MM-DD' or ISO
-  'Avg active time'?: string; // e.g., "5m 30s"
+  Date?: string; 
+  'Avg active time'?: string; 
   'Number of users'?: number;
   'Logged in users'?: number;
 }
@@ -215,15 +217,14 @@ export interface AiUsageBaserowRecord extends BaseRecord {
   'Tokens used'?: number;
 }
 
-// Task Record for Table 552540
 export interface TaskRecord extends BaseRecord {
   Task?: string;
   Info?: string;
-  assigned_to?: string; // Assumed API field name for "assigned to"
+  assigned_to?: string; 
   Due?: string;
-  Completed?: "Yes" | "No" | string; // Allow string for flexibility from Baserow
-  Date_of_completion?: string; // Assumed API field name for "Date of completion"
-  Date_assigned?: string; // Assumed API field name for "Date assigned"
+  Completed?: "Yes" | "No" | string; 
+  Date_of_completion?: string; 
+  Date_assigned?: string; 
 }
 
 
@@ -277,7 +278,8 @@ async function makeBaserowRequest(
     }
     
     const responseData = await response.json();
-    console.log(`[BaserowService] Response Data for ${method} ${url}`, JSON.stringify(responseData).substring(0, 300) + (JSON.stringify(responseData).length > 300 ? '...' : ''));
+    const responsePreview = JSON.stringify(responseData);
+    console.log(`[BaserowService] Response Data for ${method} ${url}`, responsePreview.substring(0, 300) + (responsePreview.length > 300 ? '...' : ''));
     return responseData;
 
   } catch (error: any) {
@@ -387,7 +389,7 @@ export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRec
 
 // Subject Notes Functions (Table 552726)
 export async function fetchSubjectNotes(): Promise<SubjectNoteRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`; // Order by most recently updated
+  const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`; 
   console.log(`--- Service: fetchSubjectNotes (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}) ---`);
   try {
     const data = await makeBaserowRequest(endpoint, 'GET');
@@ -728,7 +730,7 @@ export async function createNotification(notificationData: Omit<NotificationBase
 
 // --- Website Traffic Service Functions (Table 542800) ---
 export async function fetchWebsiteTrafficData(): Promise<WebsiteTrafficBaserowRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_WEBSITE_TRAFFIC_TABLE_ID}/?user_field_names=true&size=200&order_by=-Date`; // Assuming 'Date' is the field to sort by
+  const endpoint = `/api/database/rows/table/${BASEROW_WEBSITE_TRAFFIC_TABLE_ID}/?user_field_names=true&size=200&order_by=-Date`; 
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as WebsiteTrafficBaserowRecord[];
@@ -752,20 +754,12 @@ export async function fetchAiUsageData(): Promise<AiUsageBaserowRecord[]> {
 
 // --- Tasks Service Functions (Table 552540) ---
 export async function fetchTasksForUser(userEmail: string): Promise<TaskRecord[]> {
-  // IMPORTANT: Verify the actual API field name for "assigned to". Using "assigned_to" as a placeholder.
-  // Baserow filter for "contains" is `filter__field_{field_id}__contains` or `filter__{field_name}__contains`
-  // However, for text fields, direct `contains` filter might not be available via field name directly in the list rows endpoint without knowing the field_id.
-  // A common approach for comma-separated values is to fetch all and filter client-side, or use a more complex filter if Baserow supports it well for text contains.
-  // For now, fetching all tasks and filtering client-side, which is NOT ideal for large datasets.
-  // A better Baserow filter would be `filter__assigned_to__contains=user@example.com` IF `assigned_to` is the correct field name.
-  // For simplicity now, I'll fetch all and let the action filter. This needs optimization for production.
-  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
   console.log(`--- Service: fetchTasksForUser (Table ID: ${BASEROW_TASKS_TABLE_ID}) for user: ${userEmail} ---`);
   try {
     const data = await makeBaserowRequest(endpoint);
     const allTasks = (data?.results || []) as TaskRecord[];
-    // Client-side filtering (temporary solution - should be done via Baserow filter if possible)
-    // Assumes assigned_to field exists and is correct
+    
     const userTasks = allTasks.filter(task => 
         task.assigned_to && task.assigned_to.split(',').map(email => email.trim().toLowerCase()).includes(userEmail.toLowerCase())
     );
@@ -794,3 +788,6 @@ export async function updateTask(taskId: number, updates: Partial<TaskRecord>): 
     throw error;
   }
 }
+
+
+    
