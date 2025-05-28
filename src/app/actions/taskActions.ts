@@ -1,9 +1,9 @@
-
 // src/app/actions/taskActions.ts
 'use server';
 
-import { fetchTaskById, updateTask, type TaskRecord } from '@/services/baserowService';
+import { fetchTaskById, updateTask, type TaskRecord, fetchTasksForUser } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
+import { formatISO } from 'date-fns';
 
 interface GetTasksResult {
   success: boolean;
@@ -11,28 +11,30 @@ interface GetTasksResult {
   error?: string;
 }
 
+// This is the function that gets called by the UI pages to fetch tasks
 export async function getTasksForUserAction(userEmail: string): Promise<GetTasksResult> {
+  console.log(`--- getTasksForUserAction: Initiated for user ${userEmail} ---`);
   if (!userEmail) {
+    console.error('[getTasksForUserAction] Error: User email is required.');
     return { success: false, error: 'User email is required to fetch tasks.' };
   }
   try {
-    const tasks = await fetchTaskById(userEmail); // This seems to be an error, fetchTaskById expects a taskId (number)
-                                               // It should be fetchTasksForUser(userEmail) from baserowService
-                                               // Assuming fetchTasksForUser exists in baserowService and returns TaskRecord[]
-    // Corrected call, assuming fetchTasksForUser is defined in baserowService.ts
-    // For now, this action isn't directly called by the UI for fetching all tasks.
-    // The UI pages (page.tsx and tasks/page.tsx) call fetchTasksForUser from baserowService directly
-    // or via getTasksForUserAction if that was intended for fetching lists.
-    // Let's keep it as a placeholder or assume it's meant for a different purpose
-    // As the primary issue is with markTaskCompleteAction, we'll focus there.
-    // This getTasksForUserAction is currently not well-defined for its purpose.
-    // For now, I will return an empty array to avoid further errors here.
-    // This function should ideally call a service like `fetchAllTasksForUserService(userEmail)`.
-     console.warn("[getTasksForUserAction] This action is not fully implemented to fetch a list of tasks for a user correctly. Returning empty for now.");
-    return { success: true, tasks: [] };
+    // Ensure we are calling fetchTasksForUser for listing tasks by user email
+    const tasks = await fetchTasksForUser(userEmail); 
+    console.log(`[getTasksForUserAction] Fetched ${tasks?.length || 0} tasks for user ${userEmail}.`);
+    return { success: true, tasks: tasks || [] };
   } catch (error: any) {
-    console.error('Error in getTasksForUserAction:', error);
-    return { success: false, error: error.message || 'Failed to fetch tasks.' };
+    let detailedErrorMessage = 'Failed to fetch tasks.';
+    if (error.message) {
+      detailedErrorMessage = error.message;
+    }
+    // If the error object has a url property (as our makeBaserowRequest might add), include it.
+    // This helps confirm which URL caused the error.
+    if (error.url) {
+      detailedErrorMessage = `API request to ${error.url} failed: ${detailedErrorMessage}`;
+    }
+    console.error(`[getTasksForUserAction] CRITICAL Error for user ${userEmail}:`, detailedErrorMessage, error.stack);
+    return { success: false, error: detailedErrorMessage };
   }
 }
 
@@ -79,7 +81,7 @@ export async function markTaskCompleteAction(taskId: number, currentUserEmail: s
       const existingStatuses = task.Completed.split(',').map(s => s.trim());
       console.log('[markTaskCompleteAction] Existing statuses from task.Completed:', existingStatuses);
       for (let i = 0; i < Math.min(assigneesArray.length, existingStatuses.length); i++) {
-        if (existingStatuses[i] === "Yes" || existingStatuses[i] === "No") { // Ensure valid values
+        if (existingStatuses[i] === "Yes" || existingStatuses[i] === "No") {
             completedArray[i] = existingStatuses[i];
         }
       }
@@ -101,7 +103,7 @@ export async function markTaskCompleteAction(taskId: number, currentUserEmail: s
     }
     console.log('[markTaskCompleteAction] Initialized/Populated dateCompletionArray:', dateCompletionArray, 'Original task.Date_of_completion:', task.Date_of_completion);
 
-    dateCompletionArray[userIndex] = `${currentUserEmail}:${new Date().toISOString()}`;
+    dateCompletionArray[userIndex] = `${currentUserEmail}:${formatISO(new Date())}`;
     const newDateOfCompletion = dateCompletionArray.join(',');
     console.log(`[markTaskCompleteAction] New 'Date_of_completion' string to be saved: "${newDateOfCompletion}"`);
 
@@ -113,36 +115,19 @@ export async function markTaskCompleteAction(taskId: number, currentUserEmail: s
 
     const updatedTaskResponse = await updateTask(taskId, updates);
 
-    if (!updatedTaskResponse) {
-      console.error(`[markTaskCompleteAction] Error: Failed to update task ${taskId} in Baserow or received no response.`);
-      // Consider it a failure if Baserow doesn't return the updated task
+    if (!updatedTaskResponse || typeof updatedTaskResponse.id !== 'number') {
+      console.error(`[markTaskCompleteAction] Error: Failed to update task ${taskId} in Baserow or received invalid response.`);
       return { success: false, error: 'Failed to update task in Baserow or received incomplete data.' };
     }
     console.log(`[markTaskCompleteAction] Successfully updated task ${taskId}. Response from Baserow:`, JSON.stringify(updatedTaskResponse, null, 2));
 
-    // Verify if the returned data actually reflects the changes
+    // Verification Log (Optional but helpful for debugging)
     const returnedCompletedArray = updatedTaskResponse.Completed?.split(',').map(s => s.trim()) || [];
     const returnedDateCompletionArray = updatedTaskResponse.Date_of_completion?.split(',').map(s => s.trim()) || [];
 
-    let updateVerified = true;
-    if (returnedCompletedArray[userIndex] !== "Yes") {
-        console.warn(`[markTaskCompleteAction] Verification failed: 'Completed' status for user index ${userIndex} was not "Yes" in Baserow response.`);
-        updateVerified = false;
+    if (returnedCompletedArray[userIndex] !== "Yes" || !returnedDateCompletionArray[userIndex]?.startsWith(currentUserEmail)) {
+        console.warn(`[markTaskCompleteAction] POTENTIAL DATA MISMATCH for task ${taskId}, user ${currentUserEmail}. Baserow response might not fully reflect intended changes for this user's slot. Sent Completed: "${newCompletedStatus}", Received: "${updatedTaskResponse.Completed}". Sent Date: "${newDateOfCompletion}", Received: "${updatedTaskResponse.Date_of_completion}"`);
     }
-    if (!returnedDateCompletionArray[userIndex]?.startsWith(currentUserEmail)) {
-        console.warn(`[markTaskCompleteAction] Verification failed: 'Date_of_completion' for user index ${userIndex} did not update correctly in Baserow response.`);
-        updateVerified = false;
-    }
-
-    if (!updateVerified) {
-        // Even if Baserow returns a 200, if our specific user's change isn't reflected, treat it as a partial failure or an issue.
-        // For the UI, we might still want to proceed optimistically if Baserow itself didn't error out.
-        // However, this log is important for debugging.
-        console.error(`[markTaskCompleteAction] Discrepancy detected: Baserow response for task ${taskId} did not fully reflect the intended changes for user ${currentUserEmail}.`);
-        // We could return success: false here, but it might be too strict if Baserow has eventual consistency or minor response differences.
-        // For now, let's trust the overall success of the PATCH call if updatedTaskResponse is valid.
-    }
-
 
     revalidatePath('/');
     revalidatePath('/tasks');
@@ -150,7 +135,14 @@ export async function markTaskCompleteAction(taskId: number, currentUserEmail: s
     return { success: true, updatedTask: updatedTaskResponse };
 
   } catch (error: any) {
-    console.error(`[markTaskCompleteAction] CRITICAL Error for task ${taskId} by user ${currentUserEmail}:`, error.message, error.stack);
-    return { success: false, error: error.message || 'Failed to mark task as complete.' };
+    let detailedErrorMessage = 'Failed to mark task as complete.';
+    if (error.message) {
+      detailedErrorMessage = error.message;
+    }
+    if (error.url) {
+      detailedErrorMessage = `API request to ${error.url} failed: ${detailedErrorMessage}`;
+    }
+    console.error(`[markTaskCompleteAction] CRITICAL Error for task ${taskId} by user ${currentUserEmail}:`, detailedErrorMessage, error.stack);
+    return { success: false, error: detailedErrorMessage };
   }
 }
