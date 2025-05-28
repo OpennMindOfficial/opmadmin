@@ -220,11 +220,11 @@ export interface AiUsageBaserowRecord extends BaseRecord {
 export interface TaskRecord extends BaseRecord {
   Task?: string;
   Info?: string;
-  assigned_to?: string; 
+  'assigned to'?: string; 
   Due?: string;
   Completed?: "Yes" | "No" | string; 
-  Date_of_completion?: string; 
-  Date_assigned?: string; 
+  'Date of completion'?: string; 
+  'Date assigned'?: string; 
 }
 
 
@@ -279,7 +279,7 @@ async function makeBaserowRequest(
     
     const responseData = await response.json();
     const responsePreview = JSON.stringify(responseData);
-    console.log(`[BaserowService] Response Data for ${method} ${url}`, responsePreview.substring(0, 300) + (responsePreview.length > 300 ? '...' : ''));
+    // console.log(`[BaserowService] Response Data for ${method} ${url}`, responsePreview.substring(0, 300) + (responsePreview.length > 300 ? '...' : ''));
     return responseData;
 
   } catch (error: any) {
@@ -311,7 +311,7 @@ export async function getUserById(rowId: number): Promise<UserRecord | null> {
    console.log(`--- Service: getUserById (Table ID: ${BASEROW_TEAM_TABLE_ID}, Row ID: ${rowId}) ---`);
    try {
     const data = await makeBaserowRequest(endpoint, 'GET');
-    console.log(`[BaserowService] User data for ID ${rowId}:`, data);
+    // console.log(`[BaserowService] User data for ID ${rowId}:`, data);
     return data as UserRecord;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch user by ID ${rowId} from table ${BASEROW_TEAM_TABLE_ID}:`, error);
@@ -754,15 +754,24 @@ export async function fetchAiUsageData(): Promise<AiUsageBaserowRecord[]> {
 
 // --- Tasks Service Functions (Table 552540) ---
 export async function fetchTasksForUser(userEmail: string): Promise<TaskRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200`; // Removed order_by for now
+  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200`;
   console.log(`--- Service: fetchTasksForUser (Table ID: ${BASEROW_TASKS_TABLE_ID}) for user: ${userEmail} ---`);
   try {
     const data = await makeBaserowRequest(endpoint);
     const allTasks = (data?.results || []) as TaskRecord[];
     
-    const userTasks = allTasks.filter(task => 
-        task.assigned_to && task.assigned_to.split(',').map(email => email.trim().toLowerCase()).includes(userEmail.toLowerCase())
-    );
+    // Log the first task (if any) to inspect its structure
+    if (allTasks.length > 0) {
+      console.log('[BaserowService] Raw first task object:', JSON.stringify(allTasks[0], null, 2));
+    }
+
+    const userTasks = allTasks.filter(task => {
+        const assignedToField = task['assigned to']; // Use bracket notation for field with space
+        if (assignedToField && typeof assignedToField === 'string') {
+            return assignedToField.split(',').map(email => email.trim().toLowerCase()).includes(userEmail.toLowerCase());
+        }
+        return false;
+    });
     console.log(`[BaserowService] Total tasks fetched: ${allTasks.length}, Tasks for ${userEmail}: ${userTasks.length}`);
     return userTasks;
   } catch (error) {
@@ -780,6 +789,17 @@ export async function updateTask(taskId: number, updates: Partial<TaskRecord>): 
       fieldsToUpdate[key] = (updates as any)[key];
     }
   }
+  // Ensure field names sent to Baserow match what the API expects (e.g., "Date of completion")
+  if (fieldsToUpdate.Date_of_completion && !fieldsToUpdate['Date of completion']) {
+      fieldsToUpdate['Date of completion'] = fieldsToUpdate.Date_of_completion;
+      delete fieldsToUpdate.Date_of_completion;
+  }
+  if (fieldsToUpdate.Date_assigned && !fieldsToUpdate['Date assigned']) {
+      fieldsToUpdate['Date assigned'] = fieldsToUpdate.Date_assigned;
+      delete fieldsToUpdate.Date_assigned;
+  }
+
+
   console.log(`[BaserowService] Attempting to PATCH task ${taskId} with payload:`, JSON.stringify(fieldsToUpdate, null, 2));
   try {
     return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
@@ -788,3 +808,4 @@ export async function updateTask(taskId: number, updates: Partial<TaskRecord>): 
     throw error;
   }
 }
+
