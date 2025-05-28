@@ -28,7 +28,7 @@ const parseApiKeys = (dataField?: string): string[] => {
 };
 
 const getStatusIndicator = (activeValue?: boolean | string) => {
-  const isActive = activeValue === true || (typeof activeValue === 'string' && activeValue.toLowerCase() === 'true');
+  const isActive = activeValue === true || (typeof activeValue === 'string' && String(activeValue).toLowerCase() === 'true');
   if (isActive) return <CheckCircle className="h-5 w-5 text-green-500" title="Active" />;
   return <XCircle className="h-5 w-5 text-red-500" title="Inactive"/>;
 };
@@ -71,12 +71,11 @@ export default function ApiTestingPage() {
   const handleTestButtonClick = (apiKey: string, config: ApiTestConfigRecord) => {
     setCurrentTestApiKey(apiKey);
     setCurrentTestConfig(config);
-    // For now, just show a toast. In future, this could open a "chat AI" dialog.
     toast({
       title: `Test API Key: ${apiKey}`,
-      description: `(Full test UI for ${config.Type} - ${config['Use case']} coming soon)`,
+      description: `(Full test UI for API type '${config.Type || 'undefined'}' coming soon)`,
     });
-    // setIsTestDialogOpen(true); // Uncomment this when dialog is ready
+    // setIsTestDialogOpen(true); // Dialog will not open immediately, matching screenshot behavior
     console.log("Testing API Key:", apiKey, "Config:", config);
   };
 
@@ -87,7 +86,7 @@ export default function ApiTestingPage() {
     // Simulate an API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({title: "Test Complete (Mock)", description: `Test for ${currentTestApiKey} finished.`});
-    setIsTestDialogOpen(false);
+    setIsTestDialogOpen(false); // Close dialog after mock test
   };
 
 
@@ -186,7 +185,7 @@ export default function ApiTestingPage() {
           </Card>
         </section>
 
-        {/* Placeholder Test Dialog - to be replaced with chat AI UI */}
+        {/* Placeholder Test Dialog - can be triggered programmatically later if needed */}
         <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -217,3 +216,5 @@ export default function ApiTestingPage() {
     </div>
   );
 }
+
+    
