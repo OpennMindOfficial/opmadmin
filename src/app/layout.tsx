@@ -1,17 +1,17 @@
 import type { Metadata } from 'next';
-import { Poppins } from 'next/font/google'; // Changed from Geist to Poppins
+import { Poppins } from 'next/font/google';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"; // Keep Toaster for notifications
+import { Toaster } from "@/components/ui/toaster";
 
 const poppins = Poppins({
   variable: '--font-poppins',
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'], // Added weights as commonly used
+  weight: ['400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
-  title: 'OpennMind Dashboard', // Kept existing title
-  description: 'Task Management Dashboard', // Updated description
+  title: 'OpennMind Dashboard',
+  description: 'Task Management Dashboard',
 };
 
 export default function RootLayout({
