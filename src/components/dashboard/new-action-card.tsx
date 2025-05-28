@@ -14,7 +14,7 @@ interface NewActionCardProps {
   actionIcon: LucideIcon;
   cardVariant: CardVariant;
   primaryActionLabel: string;
-  href?: string; // New prop for navigation
+  href?: string; 
 }
 
 export function NewActionCard({ title, description, imageHint, actionIcon: ActionIcon, cardVariant, primaryActionLabel, href }: NewActionCardProps) {
@@ -317,7 +317,7 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
   const showPlusIcon = primaryActionLabel === "Create" || primaryActionLabel === "Add";
 
   const PrimaryButton = () => (
-    <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground">
+    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
       {showPlusIcon && <Plus className="mr-2 h-4 w-4" />}
       {primaryActionLabel}
     </Button>
@@ -334,17 +334,14 @@ export function NewActionCard({ title, description, imageHint, actionIcon: Actio
       <CardContent className="flex-grow pb-3">
         <CardDescription className="text-sm text-muted-foreground">{description}</CardDescription>
       </CardContent>
-      <CardFooter className="flex-col items-start space-y-3 pt-0 pb-4 px-4 sm:flex-row sm:space-y-0 sm:space-x-2 sm:items-center">
+      <CardFooter className="pt-0 pb-4 px-4">
         {href ? (
           <Link href={href} passHref legacyBehavior>
-            <a className="w-full sm:w-auto"><PrimaryButton /></a>
+            <a className="w-full"><PrimaryButton /></a>
           </Link>
         ) : (
           <PrimaryButton />
         )}
-        <Button variant="ghost" className="w-full sm:w-auto text-muted-foreground hover:text-foreground">
-          <RefreshCw className="mr-2 h-3 w-3" /> Example
-        </Button>
       </CardFooter>
     </Card>
   );
