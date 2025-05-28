@@ -33,7 +33,7 @@ export default function FunctioningPage() {
               actionIcon={ShieldCheck}
               cardVariant="system"
               primaryActionLabel="View Details"
-              href="#" 
+              href="/functioning/security-measures" 
             />
             <NewActionCard
               title="Data Management"
@@ -42,7 +42,7 @@ export default function FunctioningPage() {
               actionIcon={DatabaseZap}
               cardVariant="data"
               primaryActionLabel="Learn More"
-              href="#"
+              href="/functioning/data-management"
             />
             <NewActionCard
               title="Database Architecture"
@@ -51,7 +51,7 @@ export default function FunctioningPage() {
               actionIcon={Database}
               cardVariant="server"
               primaryActionLabel="Read How"
-              href="#"
+              href="/functioning/database-architecture"
             />
             <NewActionCard
               title="Storage Solutions"
@@ -60,7 +60,7 @@ export default function FunctioningPage() {
               actionIcon={HardDrive}
               cardVariant="server"
               primaryActionLabel="See Architecture"
-              href="#"
+              href="/functioning/storage-solutions"
             />
             <NewActionCard
               title="AI Fine-Tuning"
@@ -69,7 +69,7 @@ export default function FunctioningPage() {
               actionIcon={BrainCog}
               cardVariant="data"
               primaryActionLabel="Explore Process"
-              href="#"
+              href="/functioning/ai-fine-tuning"
             />
           </div>
         </section>
