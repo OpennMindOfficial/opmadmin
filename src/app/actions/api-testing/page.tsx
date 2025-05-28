@@ -71,11 +71,11 @@ export default function ApiTestingPage() {
   const handleTestButtonClick = (apiKey: string, config: ApiTestConfigRecord) => {
     setCurrentTestApiKey(apiKey);
     setCurrentTestConfig(config);
-    toast({
-      title: `Test API Key: ${apiKey}`,
-      description: `(Full test UI for API type '${config.Type || 'undefined'}' coming soon)`,
+    toast({ // You can keep this toast for immediate feedback, or remove it if the dialog is sufficient
+      title: `Preparing test for API Key: ${apiKey}`,
+      description: `Configuration: ${config.Type || 'undefined'}. Dialog opening...`,
     });
-    // setIsTestDialogOpen(true); // Dialog will not open immediately, matching screenshot behavior
+    setIsTestDialogOpen(true); // This will now open the dialog
     console.log("Testing API Key:", apiKey, "Config:", config);
   };
 
@@ -185,7 +185,6 @@ export default function ApiTestingPage() {
           </Card>
         </section>
 
-        {/* Placeholder Test Dialog - can be triggered programmatically later if needed */}
         <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -216,5 +215,3 @@ export default function ApiTestingPage() {
     </div>
   );
 }
-
-    
