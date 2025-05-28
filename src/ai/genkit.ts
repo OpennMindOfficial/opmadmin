@@ -1,8 +1,7 @@
 
 import { genkit } from 'genkit';
 import { openai } from '@genkit-ai/openai'; // Import the OpenAI plugin
-// Remove or comment out the Google AI plugin if not used simultaneously
-// import { googleAI } from '@genkit-ai/googleai';
+// Google AI plugin import and usage are already commented out or removed.
 
 export const ai = genkit({
   plugins: [
@@ -10,8 +9,7 @@ export const ai = genkit({
       // You can specify your OpenAI API key here if you don't want to use environment variables
       // apiKey: 'your_openai_api_key_here_if_not_using_env_var', 
     }),
-    // If you still want to use Google AI for other features, you can keep it:
-    // googleAI(),
+    // Google AI plugin is not included here.
   ],
-  // model: 'googleai/gemini-2.0-flash', // This will be overridden by model choice in flows/prompts
+  // model: 'googleai/gemini-2.0-flash', // This would be for Google AI, can be removed if only OpenAI is used.
 });
