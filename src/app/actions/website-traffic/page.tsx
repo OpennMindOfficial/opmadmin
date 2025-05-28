@@ -5,81 +5,54 @@
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Activity as PageIcon, BarChart, Users, Eye, TrendingUp, ExternalLink } from 'lucide-react';
-// For charts, you'd typically use a library like Recharts or Chart.js
-// For this example, I'll use simple placeholders for charts.
-// import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'; (Example import)
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Activity as PageIcon, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { getWebsiteTrafficDataAction } from '@/app/actions/websiteTrafficActions';
+import type { WebsiteTrafficBaserowRecord } from '@/services/baserowService';
+import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
+import { format, parseISO, isValid } from 'date-fns';
 
-// Placeholder types - In a real app, these would come from your analytics source
-interface TrafficData {
-  totalVisits: number;
-  uniqueVisitors: number;
-  avgSessionDuration: string; // e.g., "5m 30s"
-  bounceRate: string; // e.g., "45%"
-  topPages: { path: string; visits: number }[];
-  trafficSources: { source: string; visits: number; percentage: string }[];
-  // dailyVisitsData: { date: string; visits: number }[]; // For chart
-}
-
-const mockTrafficData: TrafficData = {
-  totalVisits: 12580,
-  uniqueVisitors: 8320,
-  avgSessionDuration: "6m 15s",
-  bounceRate: "38.5%",
-  topPages: [
-    { path: "/", visits: 4500 },
-    { path: "/features", visits: 2200 },
-    { path: "/pricing", visits: 1500 },
-    { path: "/blog/popular-post", visits: 980 },
-    { path: "/contact", visits: 750 },
-  ],
-  trafficSources: [
-    { source: "Google", visits: 6000, percentage: "47.7%" },
-    { source: "Direct", visits: 3500, percentage: "27.8%" },
-    { source: "Social Media", visits: 1800, percentage: "14.3%" },
-    { source: "Referrals", visits: 1280, percentage: "10.2%" },
-  ],
-  // dailyVisitsData: Array.from({length: 30}, (_, i) => ({ date: `Day ${i+1}`, visits: Math.floor(Math.random() * 500) + 100})),
+const formatDateForDisplay = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = parseISO(dateString);
+    return isValid(date) ? format(date, "MMM dd, yyyy") : dateString; // Fallback to original string if not ISO
+  } catch (e) {
+    return dateString; // Fallback if parsing fails
+  }
 };
 
+
 export default function WebsiteTrafficPage() {
-  const [trafficData, setTrafficData] = useState<TrafficData | null>(null);
+  const { toast } = useToast();
+  const [trafficLogs, setTrafficLogs] = useState<WebsiteTrafficBaserowRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchLogs = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await getWebsiteTrafficDataAction();
+      if (result.success && result.trafficData) {
+        setTrafficLogs(result.trafficData);
+      } else {
+        setError(result.error || "Failed to load website traffic logs.");
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to load logs." });
+      }
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred.");
+      toast({ variant: "destructive", title: "Error", description: err.message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate fetching data
-    setIsLoading(true);
-    setTimeout(() => {
-      setTrafficData(mockTrafficData);
-      setIsLoading(false);
-    }, 1000);
+    fetchLogs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <NewTopNav />
-        <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-           <p className="ml-3 text-lg">Loading website traffic data...</p>
-        </main>
-      </div>
-    );
-  }
-
-  if (!trafficData) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <NewTopNav />
-        <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
-          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-          <p className="text-xl font-semibold text-destructive">Failed to load traffic data.</p>
-          <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">Try Again</Button>
-        </main>
-      </div>
-    );
-  }
 
 
   return (
@@ -93,126 +66,72 @@ export default function WebsiteTrafficPage() {
               <h1 className="text-4xl font-bold tracking-tight">Website Traffic</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
-              Analyze data on website visits, user flow, and engagement patterns. (Data source e.g., Google Analytics)
+              Log of website visits and user activity metrics. (Table ID: 542800)
             </p>
           </div>
-           <Button variant="outline" onClick={() => alert("Refresh functionality to be implemented for live data.")}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh Data
+           <Button onClick={fetchLogs} variant="outline" disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh Logs
           </Button>
         </section>
 
-        <section className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Visits</CardTitle>
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{trafficData.totalVisits.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">+5.2% from last month</p>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Unique Visitors</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{trafficData.uniqueVisitors.toLocaleString()}</div>
-                     <p className="text-xs text-muted-foreground">+3.1% from last month</p>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Session Duration</CardTitle>
-                    <BarChart className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{trafficData.avgSessionDuration}</div>
-                    <p className="text-xs text-muted-foreground">-0.5% from last month</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Bounce Rate</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{trafficData.bounceRate}</div>
-                     <p className="text-xs text-red-500">-1.2% (improvement)</p>
-                </CardContent>
-            </Card>
+        <section className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Traffic Log</CardTitle>
+              <CardDescription>Detailed log of website traffic metrics from Baserow.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+               {isLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2">Loading traffic logs...</p>
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-20 text-destructive">
+                  <AlertTriangle className="h-8 w-8 mb-2" />
+                  <p className="font-semibold">Error loading logs</p>
+                  <p className="text-sm">{error}</p>
+                  <Button onClick={fetchLogs} variant="outline" className="mt-4">Try Again</Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Visits</TableHead>
+                        <TableHead>Avg. Active Time</TableHead>
+                        <TableHead className="text-right">Number of Users</TableHead>
+                        <TableHead className="text-right">Logged-in Users</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {trafficLogs.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                            No website traffic data found in Baserow table 542800.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        trafficLogs.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatDateForDisplay(log.Date)}</TableCell>
+                            <TableCell className="text-right font-medium">{log.Visits ?? 'N/A'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{log['Avg active time'] || 'N/A'}</TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">{log['Number of users'] ?? 'N/A'}</TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">{log['Logged in users'] ?? 'N/A'}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </section>
-
-        <section className="grid md:grid-cols-2 gap-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Traffic Sources</CardTitle>
-                    <CardDescription>Where your visitors are coming from.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ul className="space-y-3">
-                        {trafficData.trafficSources.map(source => (
-                            <li key={source.source} className="flex justify-between items-center">
-                                <span className="text-sm font-medium">{source.source}</span>
-                                <div className="flex items-center">
-                                    <span className="text-sm text-muted-foreground mr-2">{source.visits.toLocaleString()}</span>
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">{source.percentage}</span>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Top Pages</CardTitle>
-                    <CardDescription>Most visited pages on your platform.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <ul className="space-y-3">
-                        {trafficData.topPages.map(page => (
-                            <li key={page.path} className="flex justify-between items-center">
-                                <a href={page.path} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate max-w-[70%]">
-                                    {page.path} <ExternalLink className="inline h-3 w-3 ml-1" />
-                                </a>
-                                <span className="text-sm text-muted-foreground">{page.visits.toLocaleString()} visits</span>
-                            </li>
-                        ))}
-                    </ul>
-                </CardContent>
-            </Card>
-        </section>
-
-        {/* Placeholder for Daily Visits Chart */}
-        <section>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Daily Visits Overview</CardTitle>
-                    <CardDescription>Chart showing visits over the last 30 days.</CardDescription>
-                </CardHeader>
-                <CardContent className="h-[300px] flex items-center justify-center bg-muted/30 rounded-md">
-                    {/* 
-                    In a real app, you would use a chart library here:
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={trafficData.dailyVisitsData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="visits" stroke="hsl(var(--primary))" activeDot={{ r: 8 }} />
-                        </LineChart>
-                    </ResponsiveContainer>
-                    */}
-                    <p className="text-muted-foreground">[Daily Visits Line Chart Placeholder]</p>
-                </CardContent>
-            </Card>
-        </section>
-
       </main>
     </div>
   );
 }
-
-    

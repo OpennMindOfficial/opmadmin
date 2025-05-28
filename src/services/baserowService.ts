@@ -24,7 +24,8 @@ const BASEROW_NCERT_SOURCES_TABLE_ID = '552910';
 const BASEROW_API_STATUS_TABLE_ID = '542782';
 const BASEROW_API_TEST_CONFIG_TABLE_ID = '542783';
 const BASEROW_ACCOUNT_CHANGES_TABLE_ID = '542794'; 
-const BASEROW_NOTIFICATIONS_TABLE_ID = '542798'; // Added Notifications Table ID
+const BASEROW_NOTIFICATIONS_TABLE_ID = '542798';
+const BASEROW_WEBSITE_TRAFFIC_TABLE_ID = '542800';
 
 
 // Table IDs for Secure Page Access
@@ -148,9 +149,9 @@ export interface AccessLogRecord extends BaseRecord {
 export interface AccountChangeLogEntryBaserowRecord extends BaseRecord {
   Name?: string;
   Email?: string;
-  'Change(s)'?: string; // Corresponds to "Changes" in the Baserow table
+  'Change(s)'?: string; 
   'Date/Time'?: string;
-  'Success/Failure'?: string; // e.g., "Success", "Failure"
+  'Success/Failure'?: string; 
 }
 
 export interface PerformanceUserMainDataRecord extends BaseRecord {
@@ -192,6 +193,14 @@ export interface NotificationBaserowRecord extends BaseRecord {
   ShownTill?: string;
   Views?: number;
   Clicks?: number;
+}
+
+export interface WebsiteTrafficBaserowRecord extends BaseRecord {
+  Visits?: number;
+  Date?: string; // Assuming date string like 'YYYY-MM-DD' or ISO
+  'Avg active time'?: string; // e.g., "5m 30s"
+  'Number of users'?: number;
+  'Logged in users'?: number;
 }
 
 
@@ -254,7 +263,7 @@ async function makeBaserowRequest(
   }
 }
 
-// User Functions (Table 551777 - was BASEROW_TEAM_TABLE_ID)
+// User Functions (Table 551777)
 export async function getUserByEmail(email: string): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
   console.log(`--- Service: getUserByEmail (Table ID: ${BASEROW_TEAM_TABLE_ID}) for email: ${email} ---`);
@@ -281,7 +290,7 @@ export async function getUserById(rowId: number): Promise<UserRecord | null> {
     return data as UserRecord;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch user by ID ${rowId} from table ${BASEROW_TEAM_TABLE_ID}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -315,7 +324,7 @@ export async function getAllUsers(): Promise<UserRecord[]> {
     return (data?.results || []) as UserRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch all users from table ${BASEROW_TEAM_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -353,7 +362,7 @@ export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRec
   }
 }
 
-// Subject Notes Functions (Table 552726 - was BASEROW_SUBJECT_NOTES_TABLE_ID)
+// Subject Notes Functions (Table 552726)
 export async function fetchSubjectNotes(): Promise<SubjectNoteRecord[]> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`; // Order by most recently updated
   console.log(`--- Service: fetchSubjectNotes (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}) ---`);
@@ -362,7 +371,7 @@ export async function fetchSubjectNotes(): Promise<SubjectNoteRecord[]> {
     return (data?.results || []) as SubjectNoteRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch subject notes from table ${BASEROW_SUBJECT_NOTES_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -383,7 +392,7 @@ export async function createSubjectNote(noteData: { Subject?: string; Chapter?: 
 
 export async function updateSubjectNote(
   rowId: number, 
-  updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'ID'>> 
+  updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'created_on' | 'updated_on'>> 
 ): Promise<SubjectNoteRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/?user_field_names=true`;
   console.log(`--- Service: updateSubjectNote (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}, Row ID: ${rowId}) ---`);
@@ -408,7 +417,7 @@ export async function deleteSubjectNote(rowId: number): Promise<boolean> {
     return true; 
   } catch (error) {
     console.error(`[BaserowService] Failed to delete subject note ${rowId} from table ${BASEROW_SUBJECT_NOTES_TABLE_ID}:`, error);
-    return false;
+    throw error;
   }
 }
 
@@ -422,7 +431,7 @@ export async function fetchAllSubjects(): Promise<AddSubjectBaserowRecord[]> {
     return (data?.results || []) as AddSubjectBaserowRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch subjects from table ${BASEROW_ADD_SUBJECT_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -444,7 +453,7 @@ export async function fetchAllBugReports(): Promise<BugReportBaserowRecord[]> {
     return (data?.results || []) as BugReportBaserowRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch bug reports from table ${BASEROW_BUG_REPORTS_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -478,7 +487,7 @@ export interface FetchFactsResponse {
   results: FactRecord[];
 }
 export async function fetchFacts(page: number = 1, limit: number = 20): Promise<FetchFactsResponse> {
-  const endpoint = `/api/database/rows/table/${BASEROW_FACTS_TABLE_ID}/?user_field_names=true&size=${limit}&page=${page}`;
+  const endpoint = `/api/database/rows/table/${BASEROW_FACTS_TABLE_ID}/?user_field_names=true&size=${limit}&page=${page}&order_by=-updated_on`;
   console.log(`[BaserowService] Fetching facts from endpoint: ${endpoint}`);
   try {
     const data = await makeBaserowRequest(endpoint);
@@ -503,13 +512,13 @@ export async function createFact(factData: Omit<FactRecord, 'id' | 'order' | 'cr
 
 // --- Questions Service Functions (Table 552908) ---
 export async function fetchAllQuestions(): Promise<QuestionRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_QUESTIONS_TABLE_ID}/?user_field_names=true&size=200`;
+  const endpoint = `/api/database/rows/table/${BASEROW_QUESTIONS_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as QuestionRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch questions from table ${BASEROW_QUESTIONS_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -525,13 +534,13 @@ export async function createQuestionEntry(questionData: Omit<QuestionRecord, 'id
 
 // --- NCERT Sources Service Functions (Table 552910) ---
 export async function fetchAllNcertSources(): Promise<NcertSourceRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_NCERT_SOURCES_TABLE_ID}/?user_field_names=true&size=200`;
+  const endpoint = `/api/database/rows/table/${BASEROW_NCERT_SOURCES_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as NcertSourceRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch NCERT sources from table ${BASEROW_NCERT_SOURCES_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -547,13 +556,13 @@ export async function createNcertSource(sourceData: Omit<NcertSourceRecord, 'id'
 
 // --- API Status Service Functions (Table 542782) ---
 export async function fetchAllApiStatuses(): Promise<ApiStatusBaserowRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_API_STATUS_TABLE_ID}/?user_field_names=true&size=200`;
+  const endpoint = `/api/database/rows/table/${BASEROW_API_STATUS_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as ApiStatusBaserowRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch API statuses from table ${BASEROW_API_STATUS_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -576,13 +585,13 @@ export async function createApiStatusEntry(apiStatusData: Partial<Omit<ApiStatus
 
 // --- API Test Config Service Functions (Table 542783) ---
 export async function fetchApiTestConfigs(): Promise<ApiTestConfigRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_API_TEST_CONFIG_TABLE_ID}/?user_field_names=true&size=200`;
+  const endpoint = `/api/database/rows/table/${BASEROW_API_TEST_CONFIG_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as ApiTestConfigRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch API test configs from table ${BASEROW_API_TEST_CONFIG_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -628,7 +637,7 @@ export async function fetchAccountChangesLog(): Promise<AccountChangeLogEntryBas
     return (data?.results || []) as AccountChangeLogEntryBaserowRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch account changes log from table ${BASEROW_ACCOUNT_CHANGES_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -636,38 +645,38 @@ export async function fetchAccountChangesLog(): Promise<AccountChangeLogEntryBas
 // --- Service Functions for Protected Data (User Accounts, Pro Users) ---
 const BASEROW_USER_ACCOUNTS_DATA_TABLE_ID = '542785';
 export async function fetchUserAccountData(): Promise<UserRecord[]> {
-    const endpoint = `/api/database/rows/table/${BASEROW_USER_ACCOUNTS_DATA_TABLE_ID}/?user_field_names=true&size=200`;
+    const endpoint = `/api/database/rows/table/${BASEROW_USER_ACCOUNTS_DATA_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`;
     try {
         const data = await makeBaserowRequest(endpoint);
         return (data?.results || []) as UserRecord[];
     } catch (error) {
         console.error(`[BaserowService] Failed to fetch user account data from table ${BASEROW_USER_ACCOUNTS_DATA_TABLE_ID}:`, error);
-        return [];
+        throw error;
     }
 }
 
 const BASEROW_PRO_USERS_DATA_TABLE_ID = '552928';
 
 export async function fetchProUsersData(): Promise<ProUserSpecificRecord[]> {
-    const endpoint = `/api/database/rows/table/${BASEROW_PRO_USERS_DATA_TABLE_ID}/?user_field_names=true&size=200`;
+    const endpoint = `/api/database/rows/table/${BASEROW_PRO_USERS_DATA_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`;
     try {
         const data = await makeBaserowRequest(endpoint);
         return (data?.results || []) as ProUserSpecificRecord[];
     } catch (error) {
         console.error(`[BaserowService] Failed to fetch pro users data from table ${BASEROW_PRO_USERS_DATA_TABLE_ID}:`, error);
-        return [];
+        throw error;
     }
 }
 
 // --- Service Function for Performance Tracking Data (Tables 546405, 546409) ---
 export async function fetchPerformanceTableData(tableId: string): Promise<Array<PerformanceUserMainDataRecord | PerformanceSubjectDataRecord>> {
-  const endpoint = `/api/database/rows/table/${tableId}/?user_field_names=true&size=200`;
+  const endpoint = `/api/database/rows/table/${tableId}/?user_field_names=true&size=200&order_by=-updated_on`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as Array<PerformanceUserMainDataRecord | PerformanceSubjectDataRecord>;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch performance data from table ${tableId}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -679,7 +688,7 @@ export async function fetchNotifications(): Promise<NotificationBaserowRecord[]>
     return (data?.results || []) as NotificationBaserowRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch notifications from table ${BASEROW_NOTIFICATIONS_TABLE_ID}:`, error);
-    return [];
+    throw error;
   }
 }
 
@@ -690,6 +699,18 @@ export async function createNotification(notificationData: Omit<NotificationBase
     return await makeBaserowRequest(endpoint, 'POST', payload);
   } catch (error) {
     console.error(`[BaserowService] Failed to create notification in table ${BASEROW_NOTIFICATIONS_TABLE_ID}:`, error);
+    throw error;
+  }
+}
+
+// --- Website Traffic Service Functions (Table 542800) ---
+export async function fetchWebsiteTrafficData(): Promise<WebsiteTrafficBaserowRecord[]> {
+  const endpoint = `/api/database/rows/table/${BASEROW_WEBSITE_TRAFFIC_TABLE_ID}/?user_field_names=true&size=200&order_by=-Date`; // Assuming 'Date' is the field to sort by
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return (data?.results || []) as WebsiteTrafficBaserowRecord[];
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch website traffic data from table ${BASEROW_WEBSITE_TRAFFIC_TABLE_ID}:`, error);
     throw error;
   }
 }
