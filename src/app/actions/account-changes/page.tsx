@@ -6,23 +6,11 @@ import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserCog as PageIcon, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
-// TODO: Implement Server Actions and Baserow Service for Account Changes Log
-// import { getAccountChangesLogAction, type AccountChangeLogEntry } from '@/app/actions/accountLogActions'; // Placeholder
+import { UserCog as PageIcon, Loader2, AlertTriangle, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { getAccountChangesLogAction, type AccountChangeLogEntry } from '@/app/actions/accountLogActions';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
-
-// Placeholder type
-interface AccountChangeLogEntry {
-  id: string; // or number
-  UserEmail: string;
-  UserName?: string;
-  Action: string; // e.g., "Profile Update", "Password Change", "Email Changed"
-  Timestamp: string; // ISO date string
-  Details?: string; // e.g., "Changed name from X to Y"
-  ChangedBy?: string; // Admin/System/User
-}
 
 const formatTimestamp = (timestamp?: string) => {
   if (!timestamp) return 'N/A';
@@ -34,6 +22,18 @@ const formatTimestamp = (timestamp?: string) => {
   }
 };
 
+const getStatusIndicator = (status?: string) => {
+  if (!status) return <span className="text-xs text-muted-foreground">N/A</span>;
+  const lowerStatus = status.toLowerCase();
+  if (lowerStatus === 'success' || lowerStatus === 'true') {
+    return <CheckCircle className="h-5 w-5 text-green-500" title="Success" />;
+  }
+  if (lowerStatus === 'failure' || lowerStatus === 'false') {
+    return <XCircle className="h-5 w-5 text-red-500" title="Failure" />;
+  }
+  return <span className="text-xs text-muted-foreground">{status}</span>;
+};
+
 
 export default function AccountChangesPage() {
   const { toast } = useToast();
@@ -41,29 +41,15 @@ export default function AccountChangesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- MOCK DATA & FUNCTIONS ---
-  const mockAccountChanges: AccountChangeLogEntry[] = [
-    { id: '1', UserEmail: 'user1@example.com', UserName: 'Alice Smith', Action: 'Profile Update', Timestamp: new Date(Date.now() - 1*60*60000).toISOString(), Details: 'Updated DOB', ChangedBy: 'User' },
-    { id: '2', UserEmail: 'user2@example.com', UserName: 'Bob Johnson', Action: 'Password Change', Timestamp: new Date(Date.now() - 2*60*60000).toISOString(), Details: 'Password changed successfully', ChangedBy: 'User' },
-    { id: '3', UserEmail: 'user1@example.com', UserName: 'Alice Smith', Action: 'Email Changed', Timestamp: new Date(Date.now() - 5*60*60000).toISOString(), Details: 'Email changed from old@example.com to user1@example.com', ChangedBy: 'Admin' },
-    { id: '4', UserEmail: 'user3@example.com', UserName: 'Charlie Brown', Action: 'Account Created', Timestamp: new Date(Date.now() - 24*60*60000).toISOString(), Details: 'New account registered via email.', ChangedBy: 'System' },
-  ];
-  const mockGetAccountChangesLogAction = async () => {
-    await new Promise(resolve => setTimeout(resolve, 600)); // Simulate delay
-    return { success: true, logs: [...mockAccountChanges].sort((a,b) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()) };
-  };
-  // --- END MOCK ---
-
   const fetchLogs = async () => {
     setIsLoading(true); setError(null);
     try {
-      // const result = await getAccountChangesLogAction();
-      const result = await mockGetAccountChangesLogAction();
+      const result = await getAccountChangesLogAction();
       if (result.success && result.logs) {
         setLogs(result.logs);
       } else {
-        setError("Failed to load account change logs."); // result.error
-        toast({ variant: "destructive", title: "Error", description: "Failed to load logs." });
+        setError(result.error || "Failed to load account change logs.");
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to load logs." });
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
@@ -90,7 +76,7 @@ export default function AccountChangesPage() {
               <h1 className="text-4xl font-bold tracking-tight">Account Changes (User)</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
-              Review recent modifications and updates to user accounts. (Specific Baserow table for audit log TBD)
+              Review recent modifications and updates to user accounts. (Table ID: 542794)
             </p>
           </div>
            <Button onClick={fetchLogs} variant="outline" disabled={isLoading}>
@@ -103,7 +89,7 @@ export default function AccountChangesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Account Change Log</CardTitle>
-              <CardDescription>A log of recent user account modifications.</CardDescription>
+              <CardDescription>A log of recent user account modifications from Baserow.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
                {isLoading ? (
@@ -124,29 +110,27 @@ export default function AccountChangesPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Timestamp</TableHead>
-                        <TableHead>User Email</TableHead>
-                        <TableHead>User Name</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Details</TableHead>
-                        <TableHead>Changed By</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="w-2/5">Change Description</TableHead>
+                        <TableHead className="text-center">Result</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {logs.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                            No account changes logged.
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                            No account changes logged in Baserow table 542794.
                           </TableCell>
                         </TableRow>
                       ) : (
                         logs.map((log) => (
                           <TableRow key={log.id}>
-                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatTimestamp(log.Timestamp)}</TableCell>
-                            <TableCell className="font-medium">{log.UserEmail}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{log.UserName || 'N/A'}</TableCell>
-                            <TableCell className="text-sm">{log.Action}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{log.Details || 'N/A'}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{log.ChangedBy || 'N/A'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatTimestamp(log.timestamp)}</TableCell>
+                            <TableCell className="font-medium">{log.userName || 'N/A'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{log.userEmail || 'N/A'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{log.action || 'N/A'}</TableCell>
+                            <TableCell className="text-center">{getStatusIndicator(log.status)}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -161,5 +145,3 @@ export default function AccountChangesPage() {
     </div>
   );
 }
-
-    

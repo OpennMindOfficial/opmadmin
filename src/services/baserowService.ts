@@ -5,27 +5,25 @@
 const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
 
-// Table ID for team/user login and general user data
-const BASEROW_TEAM_TABLE_ID = '551777'; 
+// Table ID for team/user login and general user data (now used for Account Settings)
+const BASEROW_TEAM_TABLE_ID = '552726'; 
 
 // Table ID for CEO specific login
 const BASEROW_CEO_TABLE_ID = '552544';
 
 // Table ID for Subject Notes
-const BASEROW_SUBJECT_NOTES_TABLE_ID = '552726'; 
+const BASEROW_SUBJECT_NOTES_TABLE_ID = '552726'; // User confirmed this is the correct ID for notes.
 
 // Table IDs for Management Pages
 const BASEROW_ADD_SUBJECT_TABLE_ID = '548576';
 const BASEROW_BUG_REPORTS_TABLE_ID = '542797';
 const BASEROW_ABOUT_US_TABLE_ID = '542795';
-
-// Table IDs for new implementations
 const BASEROW_FACTS_TABLE_ID = '542791';
 const BASEROW_QUESTIONS_TABLE_ID = '552908';
 const BASEROW_NCERT_SOURCES_TABLE_ID = '552910';
 const BASEROW_API_STATUS_TABLE_ID = '542782';
 const BASEROW_API_TEST_CONFIG_TABLE_ID = '542783';
-
+const BASEROW_ACCOUNT_CHANGES_TABLE_ID = '542794'; // New table ID for account changes log
 
 // Table IDs for Secure Page Access
 const BASEROW_PAGE_PASSWORD_TABLE_ID = '552919';
@@ -34,6 +32,7 @@ const BASEROW_ACCESS_LOG_TABLE_ID = '552920';
 // Table IDs for Performance Tracking
 const BASEROW_PERFORMANCE_USER_MAIN_TABLE_ID = '546405';
 const BASEROW_PERFORMANCE_SUBJECT_TABLE_ID = '546409';
+
 
 // --- Base Record Types ---
 interface BaseRecord {
@@ -67,7 +66,7 @@ export interface SubjectNoteRecord extends BaseRecord {
   Subject?: string;
   Chapter?: string;
   Notes?: string;
-  ID?: number | string; // User-defined ID field if present
+  ID?: number | string; 
 }
 
 export interface AddSubjectBaserowRecord extends BaseRecord {
@@ -117,7 +116,7 @@ export interface ApiStatusBaserowRecord extends BaseRecord {
   ID?: number | string; // User-defined ID
   'Used In'?: string;
   'API Key'?: string;
-  Active?: boolean | string; // Handle string "True"/"False" as well
+  Active?: boolean | string; 
   By?: string;
 }
 
@@ -128,7 +127,6 @@ export interface ApiTestConfigRecord extends BaseRecord {
   'Use case'?: string;
   Active?: boolean | string;
 }
-
 
 export interface PagePasswordRecord extends BaseRecord {
     Password?: string; 
@@ -141,6 +139,14 @@ export interface AccessLogRecord extends BaseRecord {
     'Date/Time'?: string; 
     Result?: 'Success' | 'Failure';
     Reason?: string; 
+}
+
+export interface AccountChangeLogEntryBaserowRecord extends BaseRecord {
+  Name?: string;
+  Email?: string;
+  'Change(s)'?: string; // Corresponds to "Changes" in the Baserow table
+  'Date/Time'?: string;
+  'Success/Failure'?: string; // e.g., "Success", "Failure"
 }
 
 export interface PerformanceUserMainDataRecord extends BaseRecord {
@@ -163,7 +169,7 @@ export interface PerformanceSubjectDataRecord extends BaseRecord {
   Subjects?: string;
   Hours?: string;
   'Goal Progress'?: string;
-  'Last Active'?: string;
+  'Last Active'?: string; 
 }
 
 export interface ProUserSpecificRecord extends UserRecord { 
@@ -194,8 +200,9 @@ async function makeBaserowRequest(
   if (body && (method === 'POST' || method === 'PATCH')) {
     options.body = JSON.stringify(body);
   }
-
+  
   console.log(`[BaserowService] Request: ${method} ${url}`, body && (method === 'POST' || method === 'PATCH') ? `Body (first 200 chars): ${JSON.stringify(body, null, 2).substring(0,200)}` : '(No Body or GET/DELETE request)');
+
 
   try {
     const response = await fetch(url, options);
@@ -223,7 +230,6 @@ async function makeBaserowRequest(
     }
     
     const responseData = await response.json();
-    // Shortened log for brevity in general context, detailed logging within specific service funcs if needed
     console.log(`[BaserowService] Response Data for ${method} ${url} (Type: ${typeof responseData}, Length (if array/string): ${Array.isArray(responseData) || typeof responseData === 'string' ? responseData.length : 'N/A'})`); 
     return responseData;
 
@@ -233,7 +239,7 @@ async function makeBaserowRequest(
   }
 }
 
-// User Functions (Table 551777)
+// User Functions (Table 552726 - was BASEROW_TEAM_TABLE_ID)
 export async function getUserByEmail(email: string): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
   console.log(`--- Service: getUserByEmail (Table ID: ${BASEROW_TEAM_TABLE_ID}) for email: ${email} ---`);
@@ -247,14 +253,16 @@ export async function getUserByEmail(email: string): Promise<UserRecord | null> 
     return null;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch user by email ${email} from table ${BASEROW_TEAM_TABLE_ID}:`, error);
-    throw error; // Re-throw to be caught by server action
+    throw error; 
   }
 }
 
 export async function getUserById(rowId: number): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/${rowId}/?user_field_names=true`;
+   console.log(`--- Service: getUserById (Table ID: ${BASEROW_TEAM_TABLE_ID}, Row ID: ${rowId}) ---`);
    try {
     const data = await makeBaserowRequest(endpoint, 'GET');
+    console.log(`[BaserowService] User data for ID ${rowId}:`, data);
     return data as UserRecord;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch user by ID ${rowId} from table ${BASEROW_TEAM_TABLE_ID}:`, error);
@@ -270,20 +278,23 @@ export async function updateUser(rowId: number, updates: Partial<UserRecord>): P
       fieldsToUpdate[key] = (updates as any)[key];
     }
   }
-  console.log(`[BaserowService] updateUser (Table ${BASEROW_TEAM_TABLE_ID}): Attempting to update user ${rowId} with fields:`, JSON.stringify(fieldsToUpdate));
+  console.log(`--- Service: updateUser (Table ID: ${BASEROW_TEAM_TABLE_ID}, Row ID: ${rowId}) ---`);
+  console.log(`[BaserowService] Attempting to PATCH URL: ${BASEROW_API_URL}${endpoint}`);
+  console.log(`[BaserowService] With payload:`, JSON.stringify(fieldsToUpdate, null, 2));
 
   try {
     const updatedUser = await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
-    console.log(`[BaserowService] updateUser (Table ${BASEROW_TEAM_TABLE_ID}): Update user ${rowId} response:`, updatedUser);
+    console.log(`[BaserowService] Baserow PATCH response for user ${rowId}:`, updatedUser ? JSON.stringify(updatedUser, null, 2) : "null/undefined");
     return updatedUser;
   } catch (error) {
-    console.error(`[BaserowService] updateUser (Table ${BASEROW_TEAM_TABLE_ID}): Failed to update user ${rowId}:`, error);
+    console.error(`[BaserowService] Failed to update user ${rowId} in table ${BASEROW_TEAM_TABLE_ID}:`, error);
     throw error; 
   }
 }
 
 export async function getAllUsers(): Promise<UserRecord[]> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/?user_field_names=true&size=200`; 
+  console.log(`--- Service: getAllUsers (Table ID: ${BASEROW_TEAM_TABLE_ID}) ---`);
   try {
     const data = await makeBaserowRequest(endpoint, 'GET');
     return (data?.results || []) as UserRecord[];
@@ -296,6 +307,7 @@ export async function getAllUsers(): Promise<UserRecord[]> {
 // CEO User Functions (Table 552544)
 export async function getCeoByEmail(email: string): Promise<CeoUserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_CEO_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
+  console.log(`--- Service: getCeoByEmail (Table ID: ${BASEROW_CEO_TABLE_ID}) for email: ${email} ---`);
   try {
     const data = await makeBaserowRequest(endpoint, 'GET');
     if (data && data.results && data.results.length > 0) {
@@ -310,12 +322,14 @@ export async function getCeoByEmail(email: string): Promise<CeoUserRecord | null
 
 export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRecord>): Promise<CeoUserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_CEO_TABLE_ID}/${rowId}/?user_field_names=true`;
+  console.log(`--- Service: updateCeoRecord (Table ID: ${BASEROW_CEO_TABLE_ID}, Row ID: ${rowId}) ---`);
   const fieldsToUpdate: { [key: string]: any } = {};
   for (const key in updates) {
     if (key !== 'id' && key !== 'order' && Object.prototype.hasOwnProperty.call(updates, key)) {
       fieldsToUpdate[key] = (updates as any)[key];
     }
   }
+  console.log(`[BaserowService] Attempting to PATCH CEO record with payload:`, JSON.stringify(fieldsToUpdate, null, 2));
   try {
     return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
   } catch (error) {
@@ -324,9 +338,10 @@ export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRec
   }
 }
 
-// Subject Notes Functions (Table 552726)
+// Subject Notes Functions (Table 552726 - was BASEROW_SUBJECT_NOTES_TABLE_ID)
 export async function fetchSubjectNotes(): Promise<SubjectNoteRecord[]> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200`;
+  console.log(`--- Service: fetchSubjectNotes (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}) ---`);
   try {
     const data = await makeBaserowRequest(endpoint, 'GET');
     return (data?.results || []) as SubjectNoteRecord[];
@@ -371,8 +386,7 @@ export async function updateSubjectNote(
 
 export async function deleteSubjectNote(rowId: number): Promise<boolean> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/`;
-  console.log(`--- Service: deleteSubjectNote (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}) ---`);
-  console.log(`[BaserowService] Attempting to DELETE URL: ${BASEROW_API_URL}${endpoint}`);
+  console.log(`--- Service: deleteSubjectNote (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}, Row ID: ${rowId}) ---`);
   try {
     await makeBaserowRequest(endpoint, 'DELETE');
     console.log(`[BaserowService] Successfully deleted row ${rowId} from table ${BASEROW_SUBJECT_NOTES_TABLE_ID}.`);
@@ -561,10 +575,6 @@ export async function fetchApiTestConfigs(): Promise<ApiTestConfigRecord[]> {
 // --- Service Functions for Secure Page Access (Tables 552919, 552920) ---
 export async function fetchFirstPagePassword(identifier?: string): Promise<PagePasswordRecord | null> {
   let endpoint = `/api/database/rows/table/${BASEROW_PAGE_PASSWORD_TABLE_ID}/?user_field_names=true&size=1`;
-  // If you add an "Identifier" field to table 552919 to distinguish passwords, you can filter by it:
-  // if (identifier) {
-  //   endpoint += `&filter__Identifier__equal=${encodeURIComponent(identifier)}`;
-  // }
   try {
     const data = await makeBaserowRequest(endpoint);
     if (data && data.results && data.results.length > 0) {
@@ -594,6 +604,19 @@ export async function createAccessLogEntry(logData: Partial<Omit<AccessLogRecord
     throw error;
   }
 }
+
+// --- Account Changes Log Service Function (Table 542794) ---
+export async function fetchAccountChangesLog(): Promise<AccountChangeLogEntryBaserowRecord[]> {
+  const endpoint = `/api/database/rows/table/${BASEROW_ACCOUNT_CHANGES_TABLE_ID}/?user_field_names=true&size=200&order_by=-Date/Time`; // Order by most recent
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return (data?.results || []) as AccountChangeLogEntryBaserowRecord[];
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch account changes log from table ${BASEROW_ACCOUNT_CHANGES_TABLE_ID}:`, error);
+    return [];
+  }
+}
+
 
 // --- Service Functions for Protected Data (User Accounts, Pro Users) ---
 const BASEROW_USER_ACCOUNTS_DATA_TABLE_ID = '542785';
