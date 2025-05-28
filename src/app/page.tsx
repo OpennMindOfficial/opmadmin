@@ -12,10 +12,28 @@ import Link from 'next/link';
 import { LoginDialog } from '@/components/auth/LoginDialog';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { updateUserLastActive } from '@/app/actions/authActions';
-import { getTasksForUserAction } from '@/app/actions/taskActions'; // New import
-import type { TaskRecord } from '@/services/baserowService'; // New import
+import { getTasksForUserAction } from '@/app/actions/taskActions'; 
+import type { TaskRecord } from '@/services/baserowService'; 
 import OpmImage from './opm.png';
 import { useToast } from '@/hooks/use-toast';
+import { getActivityLogsAction, type ActivityLogClientEntry } from '@/app/actions/activityLogActions';
+import { formatTimeAgo } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { CheckCircle, MessageSquare, type LucideIcon } from 'lucide-react';
+
+
+// Helper to map activity "Did" text to an icon and color
+const getActionIconDetails = (action: string): { icon: LucideIcon, color: string } => {
+  const lowerAction = action.toLowerCase();
+  if (lowerAction.includes('completed task')) return { icon: CheckCircle, color: 'text-green-500' };
+  if (lowerAction.includes('added') && lowerAction.includes('subject')) return { icon: FileText, color: 'text-blue-500' };
+  if (lowerAction.includes('added') && lowerAction.includes('note')) return { icon: Edit3, color: 'text-blue-500' };
+  if (lowerAction.includes('updated') && lowerAction.includes('profile')) return { icon: Users, color: 'text-yellow-500' }; // Or UserCog
+  if (lowerAction.includes('commented')) return { icon: MessageSquare, color: 'text-purple-500' };
+  // Add more specific mappings as activities are logged
+  return { icon: ActivityIconLucide, color: 'text-muted-foreground' }; // Default
+};
 
 
 export default function DashboardRedesignPage() {
@@ -33,6 +51,9 @@ export default function DashboardRedesignPage() {
   const [assignedTasks, setAssignedTasks] = useState<TaskRecord[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [tasksError, setTasksError] = useState<string | null>(null);
+  const [recentActivities, setRecentActivities] = useState<ActivityLogClientEntry[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false);
+  const [activitiesError, setActivitiesError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchUserTasks = async (email: string) => {
@@ -41,11 +62,8 @@ export default function DashboardRedesignPage() {
     try {
       const result = await getTasksForUserAction(email);
       if (result.success && result.tasks) {
-        // Sort by Due date (ascending, assuming date strings are comparable or convert them)
-        // For simplicity, this example assumes string comparison works or they are already sorted.
-        // A more robust sort would parse dates.
         const sortedTasks = result.tasks.sort((a, b) => (a.Due || "").localeCompare(b.Due || ""));
-        setAssignedTasks(sortedTasks.slice(0, 3)); // Show max 3 tasks
+        setAssignedTasks(sortedTasks.slice(0, 3)); 
       } else {
         setTasksError(result.error || "Failed to load tasks.");
       }
@@ -53,6 +71,23 @@ export default function DashboardRedesignPage() {
       setTasksError(e.message || "An unexpected error occurred while fetching tasks.");
     } finally {
       setIsLoadingTasks(false);
+    }
+  };
+
+  const fetchRecentActivities = async () => {
+    setIsLoadingActivities(true);
+    setActivitiesError(null);
+    try {
+      const result = await getActivityLogsAction(3); // Fetch 3 most recent
+      if (result.success && result.logs) {
+        setRecentActivities(result.logs);
+      } else {
+        setActivitiesError(result.error || "Failed to load recent activities.");
+      }
+    } catch (e: any) {
+      setActivitiesError(e.message || "An unexpected error occurred while fetching activities.");
+    } finally {
+      setIsLoadingActivities(false);
     }
   };
 
@@ -71,7 +106,8 @@ export default function DashboardRedesignPage() {
       setCurrentUserFullName(storedFullName || '');
       setIsCeoLoggedIn(storedIsCeo);
       setCurrentUserEmail(storedEmail);
-      fetchUserTasks(storedEmail); // Fetch tasks for logged-in user
+      fetchUserTasks(storedEmail); 
+      fetchRecentActivities(); 
 
       if (!storedIsCeo) {
         updateUserLastActive(userId) 
@@ -140,7 +176,8 @@ export default function DashboardRedesignPage() {
     } else {
         localStorage.removeItem('isCeoLoggedIn');
     }
-    fetchUserTasks(email); // Fetch tasks on login
+    fetchUserTasks(email); 
+    fetchRecentActivities();
   };
 
   const handleFirstTimeLogin = (email: string, userName: string, userId?: number, userRole?: string, authMethod?: string) => {
@@ -157,13 +194,14 @@ export default function DashboardRedesignPage() {
     setIsAuthenticated(true);
     setShowChangePasswordDialog(false);
     setCurrentUserFullName(userName);
-    setIsCeoLoggedIn(false); // Assuming first time login is never CEO for password change flow
+    setIsCeoLoggedIn(false); 
     setCurrentUserEmail(email);
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
     if (userId) localStorage.setItem('userId', userId.toString());
     localStorage.removeItem('isCeoLoggedIn');
-    fetchUserTasks(email); // Fetch tasks after password change & login
+    fetchUserTasks(email); 
+    fetchRecentActivities();
   };
 
   const handleLogout = () => {
@@ -183,12 +221,15 @@ export default function DashboardRedesignPage() {
     setIsCeoLoggedIn(false);
     setCurrentUserEmail(null);
     setAssignedTasks([]);
+    setRecentActivities([]);
   };
 
   const handleTaskUpdate = () => {
     if (currentUserEmail) {
-      fetchUserTasks(currentUserEmail); // Re-fetch tasks when one is updated
+      fetchUserTasks(currentUserEmail); 
     }
+    // Also refresh activities as completing a task is an activity
+    fetchRecentActivities();
   };
 
 
@@ -207,7 +248,9 @@ export default function DashboardRedesignPage() {
         onOpenChange={(isOpen) => {
           setShowChangePasswordDialog(isOpen);
           if (!isOpen && !isAuthenticated) {
-            setShowLoginDialog(true);
+            // If dialog is closed AND user is not authenticated (e.g. they somehow bypassed setting password)
+            // force login dialog.
+             setShowLoginDialog(true);
           }
         }}
         onPasswordChangedSuccess={handlePasswordChangedSuccess}
@@ -461,7 +504,7 @@ export default function DashboardRedesignPage() {
           </section>
 
           {/* Latest Activity Section */}
-          <section className="space-y-4">
+           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <h2 className="text-2xl font-semibold">Latest activity</h2>
@@ -474,7 +517,44 @@ export default function DashboardRedesignPage() {
               </Button>
             </div>
             <div className="p-6 bg-card rounded-lg shadow-sm">
-              <p className="text-muted-foreground">Your latest activity will appear here...</p>
+              {isLoadingActivities ? (
+                <div className="flex justify-center items-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <p className="ml-2 text-muted-foreground">Loading activities...</p>
+                </div>
+              ) : activitiesError ? (
+                <div className="text-center py-6 text-destructive">
+                  <AlertTriangle className="mx-auto h-6 w-6" />
+                  <p className="mt-2 text-sm">{activitiesError}</p>
+                </div>
+              ) : recentActivities.length === 0 ? (
+                <p className="text-muted-foreground text-center">No recent activity.</p>
+              ) : (
+                 <ScrollArea className="h-[180px] pr-3"> {/* Max height for 3 items roughly */}
+                    <div className="space-y-4">
+                      {recentActivities.map(activity => {
+                        const { icon: ActionIcon, color: iconColor } = getActionIconDetails(activity.action);
+                        return (
+                          <div key={activity.id} className="flex items-start space-x-3">
+                            <Avatar className="h-8 w-8 border">
+                               <AvatarImage src={`https://placehold.co/40x40.png?text=${activity.name.charAt(0)}`} alt={activity.name} data-ai-hint="person user"/>
+                              <AvatarFallback>{activity.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 text-sm">
+                              <p>
+                                <span className="font-semibold text-foreground">{activity.name}</span>
+                                <span className="text-muted-foreground"> {activity.action}: </span>
+                                <span className="font-medium text-primary">{activity.subject}</span>
+                              </p>
+                              <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
+                            </div>
+                            <ActionIcon className={`h-4 w-4 ${iconColor} self-center`} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+              )}
             </div>
           </section>
         </main>

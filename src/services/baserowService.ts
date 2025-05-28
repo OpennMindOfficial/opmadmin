@@ -30,6 +30,7 @@ const BASEROW_NOTIFICATIONS_TABLE_ID = '542798';
 const BASEROW_WEBSITE_TRAFFIC_TABLE_ID = '542800';
 const BASEROW_AI_USAGE_TABLE_ID = '553904';
 const BASEROW_TASKS_TABLE_ID = '552540';
+const BASEROW_ACTIVITY_LOG_TABLE_ID = '554167';
 
 
 // Table IDs for Secure Page Access
@@ -225,6 +226,13 @@ export interface TaskRecord extends BaseRecord {
   Completed?: string; // Comma-separated "Yes" / "No"
   Date_of_completion?: string; // Comma-separated "userEmail:timestamp"
   Date_assigned?: string; 
+}
+
+export interface ActivityLogBaserowRecord extends BaseRecord {
+  Name: string;
+  Did: string; // e.g., "completed task", "added a new subject"
+  Task: string; // e.g., "Finalize Q3 Report", "Quantum Physics 101" (could be entity name)
+  'Date/Time': string; // ISO 8601 string
 }
 
 
@@ -815,6 +823,42 @@ export async function updateTask(taskId: number, updates: Partial<TaskRecord>): 
     return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
   } catch (error) {
     console.error(`[BaserowService] Failed to update task ${taskId} in table ${BASEROW_TASKS_TABLE_ID}:`, error);
+    throw error;
+  }
+}
+
+// --- Activity Log Service Functions (Table 554167) ---
+export async function fetchActivityLogs(limit?: number): Promise<ActivityLogBaserowRecord[]> {
+  let endpoint = `/api/database/rows/table/${BASEROW_ACTIVITY_LOG_TABLE_ID}/?user_field_names=true&order_by=-Date/Time`;
+  if (limit) {
+    endpoint += `&size=${limit}`;
+  } else {
+    endpoint += `&size=200`; // Default size if no limit specified
+  }
+  console.log(`--- Service: fetchActivityLogs (Table ID: ${BASEROW_ACTIVITY_LOG_TABLE_ID}) ---`);
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return (data?.results || []) as ActivityLogBaserowRecord[];
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch activity logs from table ${BASEROW_ACTIVITY_LOG_TABLE_ID}:`, error);
+    throw error;
+  }
+}
+
+export async function createActivityLogEntry(
+  logData: Omit<ActivityLogBaserowRecord, 'id' | 'order' | 'created_on' | 'updated_on'>
+): Promise<ActivityLogBaserowRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_ACTIVITY_LOG_TABLE_ID}/?user_field_names=true`;
+  console.log(`--- Service: createActivityLogEntry (Table ID: ${BASEROW_ACTIVITY_LOG_TABLE_ID}) ---`);
+  // Ensure 'Date/Time' is in ISO format if not already
+  const payload = {
+    ...logData,
+    'Date/Time': logData['Date/Time'] ? formatISO(new Date(logData['Date/Time'])) : formatISO(new Date()),
+  };
+  try {
+    return await makeBaserowRequest(endpoint, 'POST', payload);
+  } catch (error) {
+    console.error(`[BaserowService] Failed to create activity log entry in table ${BASEROW_ACTIVITY_LOG_TABLE_ID}:`, error);
     throw error;
   }
 }
