@@ -4,130 +4,92 @@
 
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { TestTube2 as PageIcon, Play, Loader2, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-// TODO: Implement Server Actions for API Testing
-// import { runApiTestAction, type ApiTestResult } from '@/app/actions/apiTestActions'; // Placeholder
+import { TestTube2 as PageIcon, Play, Loader2, AlertTriangle, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState, useEffect } from 'react';
+import { getApiTestConfigsAction } from '@/app/actions/apiTestActions';
+import type { ApiTestConfigRecord } from '@/services/baserowService';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 
-// Placeholder type
-interface ApiTestResult {
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-  body: any; // Can be JSON, text, etc.
-  duration: number; // ms
-  error?: string;
-}
+// Function to parse comma-separated API keys
+const parseApiKeys = (dataField?: string): string[] => {
+  if (!dataField) return [];
+  return dataField.split(',').map(key => key.trim()).filter(key => key);
+};
 
-const apiTestSchema = z.object({
-  endpoint: z.string().url("Must be a valid API endpoint URL."),
-  method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
-  headers: z.string().optional().transform(val => {
-    try { return val ? JSON.parse(val) : {}; } catch { return {}; }
-  }),
-  body: z.string().optional().transform(val => {
-    try { return val ? JSON.parse(val) : null; } catch { return val || null; } // Keep as string if not JSON
-  }),
-});
-type ApiTestFormData = z.infer<typeof apiTestSchema>;
-
-const availableEndpoints = [
-  { name: "Get All Users (Mock)", url: "/api/mock/users", method: "GET" },
-  { name: "Create User (Mock)", url: "/api/mock/users", method: "POST", bodyExample: '{\n  "name": "Test User",\n  "email": "test@example.com"\n}' },
-  { name: "Baserow List Rows (Example)", url: "https://api.baserow.io/api/database/rows/table/YOUR_TABLE_ID/", method: "GET", headersExample: '{\n  "Authorization": "Token YOUR_BASEROW_API_KEY"\n}'},
-];
+const getStatusIndicator = (activeValue?: boolean | string) => {
+  const isActive = activeValue === true || (typeof activeValue === 'string' && activeValue.toLowerCase() === 'true');
+  if (isActive) return <CheckCircle className="h-5 w-5 text-green-500" title="Active" />;
+  return <XCircle className="h-5 w-5 text-red-500" title="Inactive"/>;
+};
 
 
 export default function ApiTestingPage() {
   const { toast } = useToast();
-  const [testResult, setTestResult] = useState<ApiTestResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [configs, setConfigs] = useState<ApiTestConfigRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+  const [currentTestApiKey, setCurrentTestApiKey] = useState<string | null>(null);
+  const [currentTestConfig, setCurrentTestConfig] = useState<ApiTestConfigRecord | null>(null);
 
-  const { register, handleSubmit: handleFormSubmit, reset, setValue, watch, formState: { errors } } = useForm<ApiTestFormData>({
-    resolver: zodResolver(apiTestSchema),
-    defaultValues: { method: "GET", headers: "{}", body: "" },
-  });
 
-  const selectedMethod = watch("method");
-
-  // --- MOCK DATA & FUNCTIONS ---
-  const mockRunApiTestAction = async (data: ApiTestFormData): Promise<ApiTestResult> => {
-    setIsLoading(true); setError(null); setTestResult(null);
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000)); // Simulate API call
-    
-    // Simulate different responses
-    const randomStatus = Math.random();
-    if (randomStatus < 0.7) { // 70% success
-      let responseBody: any = { message: "Success!" };
-      if (data.method === "GET") responseBody = { data: [{id:1, name:"Item 1"}, {id:2, name:"Item 2"}]};
-      else if (data.method === "POST" && data.body) responseBody = { message: "Resource created", created: data.body };
-
-      setIsLoading(false);
-      return {
-        status: data.method === "POST" ? 201 : 200,
-        statusText: data.method === "POST" ? "Created" : "OK",
-        headers: { "content-type": "application/json", "x-request-id": "mock-" + Date.now() },
-        body: responseBody,
-        duration: Math.floor(Math.random() * 300) + 50,
-      };
-    } else if (randomStatus < 0.9) { // 20% client error
-      setIsLoading(false);
-      return {
-        status: 400, statusText: "Bad Request",
-        headers: { "content-type": "application/json" },
-        body: { error: "Invalid input provided", details: "Mock validation failed." },
-        duration: Math.floor(Math.random() * 100) + 20,
-        error: "Mock Client Error: Invalid input provided"
-      };
-    } else { // 10% server error
-      setIsLoading(false);
-      return {
-        status: 500, statusText: "Internal Server Error",
-        headers: {},
-        body: "A server error occurred.",
-        duration: Math.floor(Math.random() * 50) + 10,
-        error: "Mock Server Error: Something went wrong on the server"
-      };
-    }
-  };
-  // --- END MOCK ---
-
-  const onSubmit: SubmitHandler<ApiTestFormData> = async (data) => {
-    setIsLoading(true); setError(null); setTestResult(null);
+  const fetchConfigs = async () => {
+    setIsLoading(true); setError(null);
     try {
-      // const result = await runApiTestAction(data);
-      const result = await mockRunApiTestAction(data);
-      setTestResult(result);
-      if(result.error) {
-        toast({ variant: "destructive", title: `API Test Failed (${result.status})`, description: result.error });
+      const result = await getApiTestConfigsAction();
+      if (result.success && result.configs) {
+        setConfigs(result.configs);
       } else {
-        toast({ title: `API Test Successful (${result.status})`, description: `Duration: ${result.duration}ms` });
+        setError(result.error || "Failed to load API test configurations.");
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to load configurations." });
       }
-    } catch (e: any) {
-      setError(e.message);
-      setTestResult({ status: 0, statusText: "Client Error", headers: {}, body: null, duration:0, error: e.message });
-      toast({ variant: "destructive", title: "Test Execution Error", description: e.message });
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred.");
+      toast({ variant: "destructive", title: "Error", description: err.message });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const handleEndpointPreset = (url?: string, method?: string, headers?: string, body?: string) => {
-    if (url) setValue("endpoint", url);
-    if (method) setValue("method", method as ApiTestFormData["method"]);
-    if (headers) setValue("headers", headers); else setValue("headers", "{}");
-    if (body) setValue("body", body); else setValue("body", "");
+
+  useEffect(() => {
+    fetchConfigs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleTestButtonClick = (apiKey: string, config: ApiTestConfigRecord) => {
+    setCurrentTestApiKey(apiKey);
+    setCurrentTestConfig(config);
+    // For now, just show a toast. In future, this could open a "chat AI" dialog.
+    toast({
+      title: `Test API Key: ${apiKey}`,
+      description: `(Full test UI for ${config.Type} - ${config['Use case']} coming soon)`,
+    });
+    // setIsTestDialogOpen(true); // Uncomment this when dialog is ready
+    console.log("Testing API Key:", apiKey, "Config:", config);
   };
+
+  // This is a placeholder for the actual test execution logic within the dialog
+  const executeApiTest = async () => {
+    if (!currentTestApiKey || !currentTestConfig) return;
+    toast({title: "Simulating Test", description: `Running test for API key: ${currentTestApiKey}...`});
+    // Simulate an API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    toast({title: "Test Complete (Mock)", description: `Test for ${currentTestApiKey} finished.`});
+    setIsTestDialogOpen(false);
+  };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -137,111 +99,121 @@ export default function ApiTestingPage() {
           <div className="space-y-2">
             <div className="flex items-center space-x-3">
               <PageIcon className="h-10 w-10 text-primary" />
-              <h1 className="text-4xl font-bold tracking-tight">API Testing</h1>
+              <h1 className="text-4xl font-bold tracking-tight">API Testing Configurations</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
-              Perform tests and diagnostics on various API endpoints. (Results not saved, for live testing only)
+              View and initiate tests for configured API endpoints. (Table ID: 542783)
             </p>
           </div>
+           <Button onClick={fetchConfigs} variant="outline" disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh Configurations
+          </Button>
         </section>
 
-        <div className="grid md:grid-cols-2 gap-8 items-start">
-          <Card>
+        <section className="space-y-6">
+           <Card>
             <CardHeader>
-              <CardTitle>API Test Configuration</CardTitle>
-              <CardDescription>Configure and run a test against an API endpoint.</CardDescription>
+              <CardTitle>Available API Configurations</CardTitle>
+              <CardDescription>List of APIs sourced from Baserow for testing.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4">
-                 <div>
-                    <Label htmlFor="endpointPreset">Endpoint Presets (Optional)</Label>
-                    <Select onValueChange={(value) => {
-                        const selected = availableEndpoints.find(ep => ep.url === value);
-                        if(selected) handleEndpointPreset(selected.url, selected.method, selected.headersExample, selected.bodyExample);
-                        else handleEndpointPreset(); // Clear if "custom"
-                    }}>
-                        <SelectTrigger><SelectValue placeholder="Select a preset or enter custom" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="custom">Custom Endpoint</SelectItem>
-                            {availableEndpoints.map(ep => <SelectItem key={ep.name} value={ep.url}>{ep.name} ({ep.method})</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2">Loading configurations...</p>
                 </div>
-                <div>
-                  <Label htmlFor="endpoint">Endpoint URL <span className="text-destructive">*</span></Label>
-                  <Input id="endpoint" {...register('endpoint')} placeholder="https://api.example.com/data" disabled={isLoading} />
-                  {errors.endpoint && <p className="text-sm text-destructive mt-1">{errors.endpoint.message}</p>}
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-20 text-destructive">
+                  <AlertTriangle className="h-8 w-8 mb-2" />
+                  <p className="font-semibold">Error loading configurations</p>
+                  <p className="text-sm">{error}</p>
+                  <Button onClick={fetchConfigs} variant="outline" className="mt-4">Try Again</Button>
                 </div>
-                <div>
-                  <Label htmlFor="method">HTTP Method <span className="text-destructive">*</span></Label>
-                  <Select value={selectedMethod} onValueChange={(value) => setValue("method", value as ApiTestFormData["method"])} disabled={isLoading}>
-                    <SelectTrigger id="method"> <SelectValue placeholder="Select method" /> </SelectTrigger>
-                    <SelectContent>
-                      {["GET", "POST", "PUT", "PATCH", "DELETE"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="headers">Headers (JSON format)</Label>
-                  <Textarea id="headers" {...register('headers')} rows={3} placeholder='{ "Authorization": "Bearer YOUR_TOKEN" }' disabled={isLoading} />
-                  {errors.headers && <p className="text-sm text-destructive mt-1">{errors.headers.message}</p>}
-                </div>
-                {(selectedMethod === "POST" || selectedMethod === "PUT" || selectedMethod === "PATCH") && (
-                  <div>
-                    <Label htmlFor="body">Body (JSON or plain text)</Label>
-                    <Textarea id="body" {...register('body')} rows={4} placeholder='{ "key": "value" }' disabled={isLoading} />
-                    {errors.body && <p className="text-sm text-destructive mt-1">{errors.body.message}</p>}
-                  </div>
-                )}
-                <Button type="submit" disabled={isLoading} className="w-full">
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
-                  Run Test
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card className="sticky top-24"> {/* Make results card sticky */}
-            <CardHeader>
-              <CardTitle>Test Result</CardTitle>
-              <CardDescription>Output from the API test will appear here.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading && <div className="flex items-center justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2">Running test...</p></div>}
-              {error && !testResult && <div className="text-destructive p-4 bg-destructive/10 rounded-md"><AlertTriangle className="inline mr-2"/>{error}</div>}
-              {testResult && (
-                <div className="space-y-3 text-sm">
-                  <div className={`flex items-center p-2 rounded-md ${testResult.status >= 200 && testResult.status < 300 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {testResult.status >= 200 && testResult.status < 300 ? <CheckCircle className="mr-2 h-5 w-5"/> : <XCircle className="mr-2 h-5 w-5"/>}
-                    <strong>Status: {testResult.status} {testResult.statusText}</strong>
-                    <span className="ml-auto text-xs">Duration: {testResult.duration}ms</span>
-                  </div>
-                  {testResult.error && <p className="text-red-600"><strong>Error:</strong> {testResult.error}</p>}
-                  
-                  <div>
-                    <h4 className="font-semibold mb-1">Headers:</h4>
-                    <pre className="p-2 bg-muted rounded-md text-xs overflow-x-auto max-h-40">
-                      {JSON.stringify(testResult.headers, null, 2)}
-                    </pre>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-1">Body:</h4>
-                    <pre className="p-2 bg-muted rounded-md text-xs overflow-x-auto max-h-60">
-                      {testResult.body !== null && testResult.body !== undefined ? 
-                       (typeof testResult.body === 'object' ? JSON.stringify(testResult.body, null, 2) : String(testResult.body))
-                       : "No body returned or null."
-                      }
-                    </pre>
-                  </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>API Keys (Data)</TableHead>
+                        <TableHead>Use Case</TableHead>
+                        <TableHead>Active</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {configs.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                            No API configurations found.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        configs.map((config) => (
+                          <TableRow key={config.id}>
+                            <TableCell className="font-medium">{config.ID || 'N/A'}</TableCell>
+                            <TableCell>{config.Type || 'N/A'}</TableCell>
+                            <TableCell>
+                              {parseApiKeys(config.Data).length > 0 ? (
+                                <div className="flex flex-col gap-1.5">
+                                  {parseApiKeys(config.Data).map((apiKey, index) => (
+                                    <div key={index} className="flex items-center justify-between gap-2">
+                                      <span className="text-xs font-mono bg-muted p-1 rounded break-all">{apiKey}</span>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="px-2 py-0.5 h-auto text-xs"
+                                        onClick={() => handleTestButtonClick(apiKey, config)}
+                                      >
+                                        <Play className="mr-1 h-3 w-3" /> Test
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : <span className="text-xs text-muted-foreground">No keys</span>}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{config['Use case'] || 'N/A'}</TableCell>
+                            <TableCell>{getStatusIndicator(config.Active)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
-              {!isLoading && !testResult && !error && <p className="text-muted-foreground text-center py-10">No test run yet or waiting for configuration.</p>}
             </CardContent>
           </Card>
-        </div>
+        </section>
+
+        {/* Placeholder Test Dialog - to be replaced with chat AI UI */}
+        <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Test API: {currentTestConfig?.Type}</DialogTitle>
+                    <DialogDescription>
+                        Testing API Key: <span className="font-mono bg-muted p-1 rounded text-xs">{currentTestApiKey}</span>
+                        <br/>
+                        Use Case: {currentTestConfig?.['Use case']}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <p className="text-sm text-muted-foreground">
+                        [Placeholder for Chat AI Testing Interface]
+                        <br/>
+                        This dialog will eventually contain a conversational UI to interact with and test the selected API.
+                    </p>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                         <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={executeApiTest}>Run Mock Test</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
       </main>
     </div>
   );
 }
-
-    

@@ -24,6 +24,7 @@ const BASEROW_FACTS_TABLE_ID = '542791';
 const BASEROW_QUESTIONS_TABLE_ID = '552908';
 const BASEROW_NCERT_SOURCES_TABLE_ID = '552910';
 const BASEROW_API_STATUS_TABLE_ID = '542782';
+const BASEROW_API_TEST_CONFIG_TABLE_ID = '542783';
 
 
 // Table IDs for Secure Page Access
@@ -36,7 +37,7 @@ const BASEROW_PERFORMANCE_SUBJECT_TABLE_ID = '546409';
 
 // --- Base Record Types ---
 interface BaseRecord {
-  id: number;
+  id: number; // Baserow's internal row ID
   order: string;
   [key: string]: any;
 }
@@ -66,7 +67,7 @@ export interface SubjectNoteRecord extends BaseRecord {
   Subject?: string;
   Chapter?: string;
   Notes?: string;
-  ID?: number | string; 
+  ID?: number | string; // User-defined ID field if present
 }
 
 export interface AddSubjectBaserowRecord extends BaseRecord {
@@ -116,8 +117,16 @@ export interface ApiStatusBaserowRecord extends BaseRecord {
   ID?: number | string; // User-defined ID
   'Used In'?: string;
   'API Key'?: string;
-  Active?: boolean; // Assuming boolean, but could be string 'YES'/'NO'
+  Active?: boolean | string; // Handle string "True"/"False" as well
   By?: string;
+}
+
+export interface ApiTestConfigRecord extends BaseRecord {
+  ID?: string | number; // User-defined ID
+  Type?: string;
+  Data?: string; // Comma-separated API keys
+  'Use case'?: string;
+  Active?: boolean | string;
 }
 
 
@@ -186,7 +195,7 @@ async function makeBaserowRequest(
     options.body = JSON.stringify(body);
   }
 
-  console.log(`[BaserowService] Request: ${method} ${url}`, body && (method === 'POST' || method === 'PATCH') ? `Body: ${JSON.stringify(body, null, 2)}` : '(No Body or GET/DELETE request)');
+  console.log(`[BaserowService] Request: ${method} ${url}`, body && (method === 'POST' || method === 'PATCH') ? `Body (first 200 chars): ${JSON.stringify(body, null, 2).substring(0,200)}` : '(No Body or GET/DELETE request)');
 
   try {
     const response = await fetch(url, options);
@@ -214,7 +223,8 @@ async function makeBaserowRequest(
     }
     
     const responseData = await response.json();
-    console.log(`[BaserowService] Response Data for ${method} ${url} (first 500 chars):`, JSON.stringify(responseData, null, 2).substring(0, 500) + (JSON.stringify(responseData, null, 2).length > 500 ? '...' : '')); 
+    // Shortened log for brevity in general context, detailed logging within specific service funcs if needed
+    console.log(`[BaserowService] Response Data for ${method} ${url} (Type: ${typeof responseData}, Length (if array/string): ${Array.isArray(responseData) || typeof responseData === 'string' ? responseData.length : 'N/A'})`); 
     return responseData;
 
   } catch (error: any) {
@@ -226,15 +236,18 @@ async function makeBaserowRequest(
 // User Functions (Table 551777)
 export async function getUserByEmail(email: string): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
+  console.log(`--- Service: getUserByEmail (Table ID: ${BASEROW_TEAM_TABLE_ID}) for email: ${email} ---`);
   try {
     const data = await makeBaserowRequest(endpoint, 'GET');
     if (data && data.results && data.results.length > 0) {
+      console.log(`[BaserowService] User found for email ${email}:`, data.results[0]);
       return data.results[0] as UserRecord;
     }
+    console.log(`[BaserowService] No user found for email ${email} in table ${BASEROW_TEAM_TABLE_ID}.`);
     return null;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch user by email ${email} from table ${BASEROW_TEAM_TABLE_ID}:`, error);
-    return null;
+    throw error; // Re-throw to be caught by server action
   }
 }
 
@@ -291,7 +304,7 @@ export async function getCeoByEmail(email: string): Promise<CeoUserRecord | null
     return null;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch CEO by email ${email} from CEO table ${BASEROW_CEO_TABLE_ID}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -307,7 +320,7 @@ export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRec
     return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
   } catch (error) {
     console.error(`[BaserowService] Failed to update CEO record ${rowId} in CEO table ${BASEROW_CEO_TABLE_ID}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -343,7 +356,7 @@ export async function updateSubjectNote(
   updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'ID'>> 
 ): Promise<SubjectNoteRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/?user_field_names=true`;
-  console.log(`--- Service: updateSubjectNote (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}) ---`);
+  console.log(`--- Service: updateSubjectNote (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}, Row ID: ${rowId}) ---`);
   console.log(`[BaserowService] Attempting to PATCH URL: ${BASEROW_API_URL}${endpoint}`);
   console.log(`[BaserowService] With payload:`, JSON.stringify(updates, null, 2));
   try {
@@ -390,7 +403,7 @@ export async function createNewSubject(subjectData: Omit<AddSubjectBaserowRecord
     return await makeBaserowRequest(endpoint, 'POST', subjectData);
   } catch (error) {
     console.error(`[BaserowService] Failed to create subject in table ${BASEROW_ADD_SUBJECT_TABLE_ID}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -414,7 +427,7 @@ export async function fetchAboutUsData(rowId: number = 1): Promise<AboutUsBasero
     return data as AboutUsBaserowRecord;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch About Us data from table ${BASEROW_ABOUT_US_TABLE_ID}, row ${rowId}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -424,7 +437,7 @@ export async function updateAboutUsData(rowId: number = 1, contentData: Pick<Abo
     return await makeBaserowRequest(endpoint, 'PATCH', contentData);
   } catch (error) {
     console.error(`[BaserowService] Failed to update About Us data in table ${BASEROW_ABOUT_US_TABLE_ID}, row ${rowId}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -443,7 +456,7 @@ export async function fetchFacts(page: number = 1, limit: number = 20): Promise<
     return data as FetchFactsResponse;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch facts from table ${BASEROW_FACTS_TABLE_ID}:`, error);
-    return { count: 0, next: null, previous: null, results: [] };
+    throw error;
   }
 }
 
@@ -454,7 +467,7 @@ export async function createFact(factData: Omit<FactRecord, 'id' | 'order' | 'Sh
     return await makeBaserowRequest(endpoint, 'POST', payload);
   } catch (error) {
     console.error(`[BaserowService] Failed to create fact in table ${BASEROW_FACTS_TABLE_ID}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -477,7 +490,7 @@ export async function createQuestionEntry(questionData: Omit<QuestionRecord, 'id
     return await makeBaserowRequest(endpoint, 'POST', questionData);
   } catch (error) {
     console.error(`[BaserowService] Failed to create question entry in table ${BASEROW_QUESTIONS_TABLE_ID}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -499,7 +512,7 @@ export async function createNcertSource(sourceData: Omit<NcertSourceRecord, 'id'
     return await makeBaserowRequest(endpoint, 'POST', sourceData);
   } catch (error) {
     console.error(`[BaserowService] Failed to create NCERT source in table ${BASEROW_NCERT_SOURCES_TABLE_ID}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -517,19 +530,30 @@ export async function fetchAllApiStatuses(): Promise<ApiStatusBaserowRecord[]> {
 
 export async function createApiStatusEntry(apiStatusData: Partial<Omit<ApiStatusBaserowRecord, 'id' | 'order'>>): Promise<ApiStatusBaserowRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_API_STATUS_TABLE_ID}/?user_field_names=true`;
-  // Ensure default values or handle optional fields if necessary before sending to Baserow
   const payload = {
-    'ID': apiStatusData.ID, // Make sure this user-defined ID is provided if it's mandatory in Baserow
+    'ID': apiStatusData.ID,
     'Used In': apiStatusData['Used In'],
     'API Key': apiStatusData['API Key'],
-    'Active': apiStatusData.Active === undefined ? true : apiStatusData.Active, // Default to true if not provided
+    'Active': apiStatusData.Active === undefined ? true : apiStatusData.Active, 
     'By': apiStatusData.By,
   };
   try {
     return await makeBaserowRequest(endpoint, 'POST', payload);
   } catch (error) {
     console.error(`[BaserowService] Failed to create API status entry in table ${BASEROW_API_STATUS_TABLE_ID}:`, error);
-    return null;
+    throw error;
+  }
+}
+
+// --- API Test Config Service Functions (Table 542783) ---
+export async function fetchApiTestConfigs(): Promise<ApiTestConfigRecord[]> {
+  const endpoint = `/api/database/rows/table/${BASEROW_API_TEST_CONFIG_TABLE_ID}/?user_field_names=true&size=200`;
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return (data?.results || []) as ApiTestConfigRecord[];
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch API test configs from table ${BASEROW_API_TEST_CONFIG_TABLE_ID}:`, error);
+    return [];
   }
 }
 
@@ -537,6 +561,10 @@ export async function createApiStatusEntry(apiStatusData: Partial<Omit<ApiStatus
 // --- Service Functions for Secure Page Access (Tables 552919, 552920) ---
 export async function fetchFirstPagePassword(identifier?: string): Promise<PagePasswordRecord | null> {
   let endpoint = `/api/database/rows/table/${BASEROW_PAGE_PASSWORD_TABLE_ID}/?user_field_names=true&size=1`;
+  // If you add an "Identifier" field to table 552919 to distinguish passwords, you can filter by it:
+  // if (identifier) {
+  //   endpoint += `&filter__Identifier__equal=${encodeURIComponent(identifier)}`;
+  // }
   try {
     const data = await makeBaserowRequest(endpoint);
     if (data && data.results && data.results.length > 0) {
@@ -546,7 +574,7 @@ export async function fetchFirstPagePassword(identifier?: string): Promise<PageP
     return null;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch page password from table ${BASEROW_PAGE_PASSWORD_TABLE_ID}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -563,7 +591,7 @@ export async function createAccessLogEntry(logData: Partial<Omit<AccessLogRecord
     return await makeBaserowRequest(endpoint, 'POST', payload);
   } catch (error) {
     console.error(`[BaserowService] Failed to create access log entry in table ${BASEROW_ACCESS_LOG_TABLE_ID}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -604,4 +632,3 @@ export async function fetchPerformanceTableData(tableId: string): Promise<Array<
     return [];
   }
 }
-
