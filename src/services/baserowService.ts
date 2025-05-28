@@ -5,8 +5,8 @@
 const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
 
-// Table ID for team/user login and general user data (now Account Settings table)
-const BASEROW_TEAM_TABLE_ID = '552726'; 
+// Table ID for team/user login and general user data
+const BASEROW_TEAM_TABLE_ID = '551777'; 
 
 // Table ID for CEO specific login
 const BASEROW_CEO_TABLE_ID = '552544';
@@ -19,6 +19,12 @@ const BASEROW_ADD_SUBJECT_TABLE_ID = '548576';
 const BASEROW_BUG_REPORTS_TABLE_ID = '542797';
 const BASEROW_ABOUT_US_TABLE_ID = '542795';
 
+// Table IDs for new implementations
+const BASEROW_FACTS_TABLE_ID = '542791';
+const BASEROW_QUESTIONS_TABLE_ID = '552908';
+const BASEROW_NCERT_SOURCES_TABLE_ID = '552910';
+
+
 // Table IDs for Secure Page Access
 const BASEROW_PAGE_PASSWORD_TABLE_ID = '552919';
 const BASEROW_ACCESS_LOG_TABLE_ID = '552920';
@@ -27,10 +33,15 @@ const BASEROW_ACCESS_LOG_TABLE_ID = '552920';
 const BASEROW_PERFORMANCE_USER_MAIN_TABLE_ID = '546405';
 const BASEROW_PERFORMANCE_SUBJECT_TABLE_ID = '546409';
 
-
-export interface UserRecord {
-  id: number; 
+// --- Base Record Types ---
+interface BaseRecord {
+  id: number;
   order: string;
+  [key: string]: any;
+}
+
+// --- Specific Record Interfaces ---
+export interface UserRecord extends BaseRecord {
   Name?: string; 
   Email: string;
   Password?: string; 
@@ -41,82 +52,79 @@ export interface UserRecord {
   DOB?: string; 
   Class?: string; 
   AuthMethod?: string; 
-  [key: string]: any; 
 }
 
-export interface CeoUserRecord {
-  id: number;
-  order: string;
+export interface CeoUserRecord extends BaseRecord {
   Name?: string;
   Email: string;
   Password?: string;
   'Last active'?: string;
-  [key: string]: any;
 }
 
-export interface SubjectNoteRecord {
-  id: number; 
-  order: string;
+export interface SubjectNoteRecord extends BaseRecord {
   Subject?: string;
   Chapter?: string;
   Notes?: string;
   ID?: number | string; 
-  [key: string]: any;
 }
 
-// Record Interfaces for Management Pages
-export interface AddSubjectBaserowRecord {
-  id: number;
-  order: string;
+export interface AddSubjectBaserowRecord extends BaseRecord {
   Subject: string;
   Topics?: string;
   Chapters?: string;
   'Topics divided'?: string; 
-  [key: string]: any;
 }
 
-export interface BugReportBaserowRecord {
-  id: number;
-  order: string;
+export interface BugReportBaserowRecord extends BaseRecord {
   Name: string;
   Email: string;
   Report: string;
   Date: string; 
-  [key: string]: any;
 }
 
-export interface AboutUsBaserowRecord {
-  id: number; 
-  order: string;
+export interface AboutUsBaserowRecord extends BaseRecord {
   Mission: string;
   Story: string;
-  [key: string]: any;
 }
 
-// Interfaces for Secure Page Access
-export interface PagePasswordRecord {
-    id: number;
-    order: string;
-    Password?: string; // Stores the bcrypt hash
-    Identifier?: string; // Optional: To identify which page this password is for
-    [key: string]: any;
+export interface FactRecord extends BaseRecord {
+  Category?: string;
+  Fact?: string;
+  Image?: string; // URL
+  Source?: string;
+  Shares?: number;
+  Downloads?: number;
 }
 
-export interface AccessLogRecord {
-    id?: number; // Baserow will assign this
-    order?: string; // Baserow will assign this
+export interface QuestionRecord extends BaseRecord {
+  Subject?: string;
+  ChapterID?: string;
+  Type?: string;
+  Questions?: string; // Comma-separated
+  Solutions?: string; // Comma-separated
+}
+
+export interface NcertSourceRecord extends BaseRecord {
+  Subject?: string;
+  Chapter?: string;
+  Book?: string;
+  Audio?: string; // URL to mp3 file
+}
+
+export interface PagePasswordRecord extends BaseRecord {
+    Password?: string; 
+    Identifier?: string; 
+}
+
+export interface AccessLogRecord extends BaseRecord {
     Name?: string;
     Email?: string;
-    'Date/Time'?: string; // ISO string
+    'Date/Time'?: string; 
     Result?: 'Success' | 'Failure';
-    Reason?: string; // e.g., "Incorrect Password", "Account Locked", "NULL" for success
-    [key: string]: any;
+    Reason?: string; 
 }
 
-// Interfaces for Performance Tracking
-export interface PerformanceUserMainDataRecord {
-  id: number;
-  order: string;
+export interface PerformanceUserMainDataRecord extends BaseRecord {
   Name?: string;
   Email?: string;
   'Total Study Hours'?: number;
@@ -128,19 +136,22 @@ export interface PerformanceUserMainDataRecord {
   'Notes Taken'?: number;
   'Retention Rate'?: string;
   'Daily Study'?: string;
-  [key: string]: any;
 }
 
-export interface PerformanceSubjectDataRecord {
-  id: number;
-  order: string;
+export interface PerformanceSubjectDataRecord extends BaseRecord {
   Name?: string;
   Email?: string;
   Subjects?: string;
   Hours?: string;
   'Goal Progress'?: string;
   'Last Active'?: string;
-  [key: string]: any;
+}
+
+export interface ProUserSpecificRecord extends UserRecord { 
+    DatePurchased?: string;
+    DateExpiring?: string;
+    Cost?: number;
+    'Monthly/Yearly'?: 'Monthly' | 'Yearly';
 }
 
 
@@ -158,7 +169,7 @@ async function makeBaserowRequest(
   const options: RequestInit = {
     method,
     headers,
-    cache: 'no-store', // Important for ensuring fresh data, especially after mutations
+    cache: 'no-store', 
   };
 
   if (body && (method === 'POST' || method === 'PATCH')) {
@@ -192,7 +203,7 @@ async function makeBaserowRequest(
     }
     
     const responseData = await response.json();
-    // console.log(`[BaserowService] Response Data for ${method} ${url}:`, JSON.stringify(responseData, null, 2).substring(0, 500) + '...'); 
+    console.log(`[BaserowService] Response Data for ${method} ${url} (first 500 chars):`, JSON.stringify(responseData, null, 2).substring(0, 500) + (JSON.stringify(responseData, null, 2).length > 500 ? '...' : '')); 
     return responseData;
 
   } catch (error: any) {
@@ -201,7 +212,7 @@ async function makeBaserowRequest(
   }
 }
 
-// Team User Functions (now primary user functions)
+// User Functions (Table 551777)
 export async function getUserByEmail(email: string): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
   try {
@@ -226,7 +237,6 @@ export async function getUserById(rowId: number): Promise<UserRecord | null> {
     return null;
   }
 }
-
 
 export async function updateUser(rowId: number, updates: Partial<UserRecord>): Promise<UserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_TEAM_TABLE_ID}/${rowId}/?user_field_names=true`;
@@ -259,7 +269,7 @@ export async function getAllUsers(): Promise<UserRecord[]> {
   }
 }
 
-// CEO User Functions
+// CEO User Functions (Table 552544)
 export async function getCeoByEmail(email: string): Promise<CeoUserRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_CEO_TABLE_ID}/?user_field_names=true&filter__Email__equal=${encodeURIComponent(email)}`;
   try {
@@ -290,7 +300,7 @@ export async function updateCeoRecord(rowId: number, updates: Partial<CeoUserRec
   }
 }
 
-// Subject Notes Functions
+// Subject Notes Functions (Table 552726)
 export async function fetchSubjectNotes(): Promise<SubjectNoteRecord[]> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/?user_field_names=true&size=200`;
   try {
@@ -343,7 +353,7 @@ export async function deleteSubjectNote(rowId: number): Promise<boolean> {
 
 // --- Service Functions for Management Pages ---
 
-// Add Subject Service Functions
+// Add Subject Service Functions (Table 548576)
 export async function fetchAllSubjects(): Promise<AddSubjectBaserowRecord[]> {
   const endpoint = `/api/database/rows/table/${BASEROW_ADD_SUBJECT_TABLE_ID}/?user_field_names=true&size=200`;
   try {
@@ -365,7 +375,7 @@ export async function createNewSubject(subjectData: Omit<AddSubjectBaserowRecord
   }
 }
 
-// View Reported Bugs Service Functions
+// View Reported Bugs Service Functions (Table 542797)
 export async function fetchAllBugReports(): Promise<BugReportBaserowRecord[]> {
   const endpoint = `/api/database/rows/table/${BASEROW_BUG_REPORTS_TABLE_ID}/?user_field_names=true&size=200`;
   try {
@@ -377,7 +387,7 @@ export async function fetchAllBugReports(): Promise<BugReportBaserowRecord[]> {
   }
 }
 
-// Edit About Us Service Functions
+// Edit About Us Service Functions (Table 542795)
 export async function fetchAboutUsData(rowId: number = 1): Promise<AboutUsBaserowRecord | null> { 
   const endpoint = `/api/database/rows/table/${BASEROW_ABOUT_US_TABLE_ID}/${rowId}/?user_field_names=true`;
   try {
@@ -399,7 +409,84 @@ export async function updateAboutUsData(rowId: number = 1, contentData: Pick<Abo
   }
 }
 
-// --- Service Functions for Secure Page Access ---
+// --- Facts Service Functions (Table 542791) ---
+export interface FetchFactsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: FactRecord[];
+}
+export async function fetchFacts(page: number = 1, limit: number = 20): Promise<FetchFactsResponse> {
+  const offset = (page - 1) * limit;
+  const endpoint = `/api/database/rows/table/${BASEROW_FACTS_TABLE_ID}/?user_field_names=true&size=${limit}&page=${page}`; // Baserow uses page directly
+  console.log(`[BaserowService] Fetching facts from endpoint: ${endpoint}`);
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return data as FetchFactsResponse;
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch facts from table ${BASEROW_FACTS_TABLE_ID}:`, error);
+    return { count: 0, next: null, previous: null, results: [] };
+  }
+}
+
+export async function createFact(factData: Omit<FactRecord, 'id' | 'order' | 'Shares' | 'Downloads'>): Promise<FactRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_FACTS_TABLE_ID}/?user_field_names=true`;
+  const payload = { ...factData, Shares: 0, Downloads: 0 }; // Ensure Shares and Downloads are initialized
+  try {
+    return await makeBaserowRequest(endpoint, 'POST', payload);
+  } catch (error) {
+    console.error(`[BaserowService] Failed to create fact in table ${BASEROW_FACTS_TABLE_ID}:`, error);
+    return null;
+  }
+}
+
+
+// --- Questions Service Functions (Table 552908) ---
+export async function fetchAllQuestions(): Promise<QuestionRecord[]> {
+  const endpoint = `/api/database/rows/table/${BASEROW_QUESTIONS_TABLE_ID}/?user_field_names=true&size=200`;
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return (data?.results || []) as QuestionRecord[];
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch questions from table ${BASEROW_QUESTIONS_TABLE_ID}:`, error);
+    return [];
+  }
+}
+
+export async function createQuestionEntry(questionData: Omit<QuestionRecord, 'id' | 'order'>): Promise<QuestionRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_QUESTIONS_TABLE_ID}/?user_field_names=true`;
+  try {
+    return await makeBaserowRequest(endpoint, 'POST', questionData);
+  } catch (error) {
+    console.error(`[BaserowService] Failed to create question entry in table ${BASEROW_QUESTIONS_TABLE_ID}:`, error);
+    return null;
+  }
+}
+
+// --- NCERT Sources Service Functions (Table 552910) ---
+export async function fetchAllNcertSources(): Promise<NcertSourceRecord[]> {
+  const endpoint = `/api/database/rows/table/${BASEROW_NCERT_SOURCES_TABLE_ID}/?user_field_names=true&size=200`;
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return (data?.results || []) as NcertSourceRecord[];
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch NCERT sources from table ${BASEROW_NCERT_SOURCES_TABLE_ID}:`, error);
+    return [];
+  }
+}
+
+export async function createNcertSource(sourceData: Omit<NcertSourceRecord, 'id' | 'order'>): Promise<NcertSourceRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_NCERT_SOURCES_TABLE_ID}/?user_field_names=true`;
+  try {
+    return await makeBaserowRequest(endpoint, 'POST', sourceData);
+  } catch (error) {
+    console.error(`[BaserowService] Failed to create NCERT source in table ${BASEROW_NCERT_SOURCES_TABLE_ID}:`, error);
+    return null;
+  }
+}
+
+
+// --- Service Functions for Secure Page Access (Tables 552919, 552920) ---
 export async function fetchFirstPagePassword(identifier?: string): Promise<PagePasswordRecord | null> {
   let endpoint = `/api/database/rows/table/${BASEROW_PAGE_PASSWORD_TABLE_ID}/?user_field_names=true&size=1`;
   try {
@@ -415,7 +502,7 @@ export async function fetchFirstPagePassword(identifier?: string): Promise<PageP
   }
 }
 
-export async function createAccessLogEntry(logData: Partial<AccessLogRecord>): Promise<AccessLogRecord | null> {
+export async function createAccessLogEntry(logData: Partial<Omit<AccessLogRecord, 'id' | 'order'>>): Promise<AccessLogRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_ACCESS_LOG_TABLE_ID}/?user_field_names=true`;
   try {
     const payload = {
@@ -446,12 +533,7 @@ export async function fetchUserAccountData(): Promise<UserRecord[]> {
 }
 
 const BASEROW_PRO_USERS_DATA_TABLE_ID = '552928';
-export interface ProUserSpecificRecord extends UserRecord { 
-    DatePurchased?: string;
-    DateExpiring?: string;
-    Cost?: number;
-    'Monthly/Yearly'?: 'Monthly' | 'Yearly';
-}
+
 export async function fetchProUsersData(): Promise<ProUserSpecificRecord[]> {
     const endpoint = `/api/database/rows/table/${BASEROW_PRO_USERS_DATA_TABLE_ID}/?user_field_names=true&size=200`;
     try {
@@ -463,9 +545,9 @@ export async function fetchProUsersData(): Promise<ProUserSpecificRecord[]> {
     }
 }
 
-// --- Service Function for Performance Tracking Data ---
+// --- Service Function for Performance Tracking Data (Tables 546405, 546409) ---
 export async function fetchPerformanceTableData(tableId: string): Promise<Array<PerformanceUserMainDataRecord | PerformanceSubjectDataRecord>> {
-  const endpoint = `/api/database/rows/table/${tableId}/?user_field_names=true&size=200`; // size=200 is a Baserow default max per page
+  const endpoint = `/api/database/rows/table/${tableId}/?user_field_names=true&size=200`;
   try {
     const data = await makeBaserowRequest(endpoint);
     return (data?.results || []) as Array<PerformanceUserMainDataRecord | PerformanceSubjectDataRecord>;

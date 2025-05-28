@@ -9,24 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Library as PageIcon, PlusCircle, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
-// TODO: Implement Server Actions and Baserow Service for NCERT Sources
-// import { getNcertSourcesAction, addNcertSourceAction, type NcertSourceRecord } from '@/app/actions/ncertActions'; // Placeholder
+import { getNcertSourcesAction, addNcertSourceAction } from '@/app/actions/ncertActions'; 
+import type { NcertSourceRecord } from '@/services/baserowService';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-
-// Placeholder type
-interface NcertSourceRecord {
-  id: number;
-  order: string;
-  Subject?: string;
-  Chapter?: string;
-  Book?: string;
-  Audio?: string; // URL to mp3 file
-  [key: string]: any;
-}
 
 const ncertSourceSchema = z.object({
   Subject: z.string().min(1, "Subject is required."),
@@ -48,30 +37,22 @@ export default function NcertSourcesPage() {
     resolver: zodResolver(ncertSourceSchema),
   });
 
-  // --- MOCK DATA & FUNCTIONS ---
-  const [mockNcertDb, setMockNcertDb] = useState<NcertSourceRecord[]>([]);
-  const mockGetNcertSourcesAction = async () => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return { success: true, sources: mockNcertDb.sort((a,b)=>b.id-a.id) };
-  };
-  const mockAddNcertSourceAction = async (data: NcertSourceFormData) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const newId = mockNcertDb.length > 0 ? Math.max(...mockNcertDb.map(s => s.id)) + 1 : 1;
-    const newSource: NcertSourceRecord = { ...data, id: newId, order: newId.toString() };
-    setMockNcertDb(prev => [newSource, ...prev]);
-    return { success: true, source: newSource };
-  };
-  // --- END MOCK ---
-
   const fetchSources = async () => {
     setIsLoading(true); setError(null);
     try {
-      // const result = await getNcertSourcesAction();
-      const result = await mockGetNcertSourcesAction();
-      if (result.success && result.sources) setSources(result.sources);
-      else { setError("Failed to load NCERT sources."); toast({ variant: "destructive", title: "Error", description: "Failed to load sources." });}
-    } catch (err: any) { setError(err.message); toast({ variant: "destructive", title: "Error", description: err.message });
-    } finally { setIsLoading(false); }
+      const result = await getNcertSourcesAction();
+      if (result.success && result.sources) {
+        setSources(result.sources.sort((a,b) => b.id - a.id)); // Sort by newest
+      } else { 
+        setError(result.error || "Failed to load NCERT sources."); 
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to load sources." });
+      }
+    } catch (err: any) { 
+      setError(err.message || "An unexpected error occurred."); 
+      toast({ variant: "destructive", title: "Error", description: err.message });
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   useEffect(() => { fetchSources(); }, []);
@@ -79,15 +60,19 @@ export default function NcertSourcesPage() {
   const onSubmit: SubmitHandler<NcertSourceFormData> = async (data) => {
     setIsSubmitting(true);
     try {
-      // const result = await addNcertSourceAction(data);
-      const result = await mockAddNcertSourceAction(data);
+      const result = await addNcertSourceAction(data);
       if (result.success) {
         toast({ title: "NCERT Source Added", description: "New source added successfully." });
         reset();
         fetchSources();
-      } else { toast({ variant: "destructive", title: "Error", description: "Failed to add source." }); }
-    } catch (e: any) { toast({ variant: "destructive", title: "Error", description: e.message });
-    } finally { setIsSubmitting(false); }
+      } else { 
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to add source." }); 
+      }
+    } catch (e: any) { 
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   return (
@@ -144,7 +129,7 @@ export default function NcertSourcesPage() {
         </section>
 
         <section className="space-y-6">
-          <h2 className="text-2xl font-semibold">Existing NCERT Sources</h2>
+          <h2 className="text-2xl font-semibold">Existing NCERT Sources (Latest 20)</h2>
            {isLoading ? (
             <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading sources...</p></div>
           ) : error ? (
@@ -163,10 +148,10 @@ export default function NcertSourcesPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {sources.length === 0 ? (
+                        {sources.slice(0,20).length === 0 ? (
                         <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-10">No NCERT sources added yet.</TableCell></TableRow>
                         ) : (
-                        sources.map((source) => (
+                        sources.slice(0,20).map((source) => (
                             <TableRow key={source.id}>
                             <TableCell>{source.Subject}</TableCell>
                             <TableCell>{source.Chapter}</TableCell>
@@ -194,5 +179,3 @@ export default function NcertSourcesPage() {
     </div>
   );
 }
-
-    

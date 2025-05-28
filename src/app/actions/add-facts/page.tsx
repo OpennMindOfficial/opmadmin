@@ -8,28 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'; // Added CardFooter
-import { ListPlus as PageIcon, PlusCircle, Upload, Loader2, AlertTriangle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-// TODO: Implement Server Actions and Baserow Service for Facts
-// import { getFactsAction, addFactAction, type FactRecord } from '@/app/actions/factsActions'; // Placeholder
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { ListPlus as PageIcon, PlusCircle, Loader2, AlertTriangle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { getFactsAction, addFactAction } from '@/app/actions/factsActions'; 
+import type { FactRecord } from '@/services/baserowService';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-
-// Placeholder type - replace with actual from factsActions
-interface FactRecord {
-  id: number;
-  order: string;
-  Category?: string;
-  Fact?: string;
-  Image?: string; // URL
-  Source?: string;
-  Shares?: number;
-  Downloads?: number;
-  [key: string]: any;
-}
 
 const factSchema = z.object({
   Category: z.string().min(1, "Category is required."),
@@ -48,67 +35,23 @@ export default function AddFactsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1); // Will be calculated based on total facts
+  const [totalPages, setTotalPages] = useState(1);
 
   const { register, handleSubmit: handleFormSubmit, reset, formState: { errors } } = useForm<FactFormData>({
     resolver: zodResolver(factSchema),
   });
 
-  // --- MOCK DATA & FUNCTIONS (Remove when actual actions are ready) ---
-  const [mockDb, setMockDb] = useState<FactRecord[]>(
-    Array.from({ length: 55 }, (_, i) => ({
-      id: i + 1,
-      order: (i + 1).toString(),
-      Category: `Category ${Math.ceil((i + 1) / 5)}`,
-      Fact: `This is interesting fact number ${i + 1}. It has some details that make it quite unique.`,
-      Image: `https://placehold.co/100x60.png?text=Fact${i+1}`,
-      Source: `Source ${i + 1}`,
-      Shares: Math.floor(Math.random() * 1000),
-      Downloads: Math.floor(Math.random() * 500),
-    }))
-  );
-
-  const mockGetFactsAction = async (page: number, limit: number) => {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
-    const totalFacts = mockDb.length;
-    const calculatedTotalPages = Math.ceil(totalFacts / limit);
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    return {
-      success: true,
-      facts: mockDb.slice(startIndex, endIndex),
-      totalPages: calculatedTotalPages,
-      totalFacts: totalFacts
-    };
-  };
-
-  const mockAddFactAction = async (data: FactFormData) => {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
-    const newId = mockDb.length > 0 ? Math.max(...mockDb.map(f => f.id)) + 1 : 1;
-    const newFact: FactRecord = {
-      ...data,
-      id: newId,
-      order: newId.toString(),
-      Shares: 0,
-      Downloads: 0,
-    };
-    setMockDb(prevDb => [newFact, ...prevDb].sort((a,b) => b.id - a.id)); // Add to top and re-sort if needed
-    return { success: true, fact: newFact };
-  };
-  // --- END MOCK DATA & FUNCTIONS ---
-
   const fetchFacts = async (page: number) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Replace with actual action: const result = await getFactsAction(page, FACTS_PER_PAGE);
-      const result = await mockGetFactsAction(page, FACTS_PER_PAGE);
+      const result = await getFactsAction(page, FACTS_PER_PAGE);
       if (result.success && result.facts) {
         setFacts(result.facts);
         setTotalPages(result.totalPages || 1);
       } else {
-        setError("Failed to load facts."); // result.error
-        toast({ variant: "destructive", title: "Error", description: "Failed to load facts." });
+        setError(result.error || "Failed to load facts.");
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to load facts." });
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
@@ -121,29 +64,25 @@ export default function AddFactsPage() {
   useEffect(() => {
     fetchFacts(currentPage);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]); // Re-fetch when currentPage changes
+  }, [currentPage]); 
 
   const onSubmit: SubmitHandler<FactFormData> = async (data) => {
     setIsSubmitting(true);
     try {
-      // Replace with actual action: const result = await addFactAction(data);
-      const result = await mockAddFactAction(data);
+      const result = await addFactAction(data);
       if (result.success && result.fact) {
         toast({ title: "Fact Added", description: "New fact has been successfully added." });
         reset();
-        // If adding to the current view (e.g. page 1), refresh or prepend.
-        // For simplicity, just refetch current page after add if it's page 1, or refetch all if totalPages might change.
+        // Refresh the current page to show the new fact if it's on the first page
         if (currentPage === 1) {
-            fetchFacts(1);
+            fetchFacts(1); 
         } else {
-            // If adding might change total pages, or you want to see it immediately,
-            // you might want to go to page 1 or re-calculate total pages.
-            // For now, let's just refresh current page, but be mindful of this.
+            // If not on first page, still good to refresh current page, or go to first.
+            // For simplicity, just refresh current page. The new fact might not appear if it sorts to another page.
             fetchFacts(currentPage);
         }
-
       } else {
-        toast({ variant: "destructive", title: "Error", description: "Failed to add fact." }); // result.error
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to add fact." });
       }
     } catch (error: any) {
       toast({ variant: "destructive", title: "Submission Error", description: error.message });
@@ -254,9 +193,8 @@ export default function AddFactsPage() {
                           </TableCell>
                           <TableCell>
                             {fact.Image ? (
-                              <a href={fact.Image} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs">
-                                View Image
-                              </a>
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={fact.Image} alt="Fact image" data-ai-hint="fact relevant" className="h-10 w-auto object-contain rounded" />
                             ) : (
                               <span className="text-xs text-muted-foreground">N/A</span>
                             )}
@@ -324,5 +262,3 @@ export default function AddFactsPage() {
     </div>
   );
 }
-
-    
