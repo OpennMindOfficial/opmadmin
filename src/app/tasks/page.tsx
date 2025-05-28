@@ -1,23 +1,61 @@
 
 "use client";
 
+import { useEffect, useState } from 'react';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { TaskCard } from '@/components/dashboard/task-card';
-import { LayoutGrid } from 'lucide-react'; // Using LayoutGrid for tasks icon
-
-// Mock data for all tasks - in a real app, this would come from an API
-const allTasksData = [
-  { id: 'task1', title: 'Finalize Q3 Report', project: 'Project Alpha', dueDate: 'Oct 28', initialCompleted: false },
-  { id: 'task2', title: 'User Persona Workshop', project: 'Marketing Campaign', dueDate: 'Nov 05', initialCompleted: true },
-  { id: 'task3', title: 'Develop API Endpoint', project: 'Platform Upgrade', dueDate: 'Nov 12', initialCompleted: false },
-  { id: 'task4', title: 'Client Presentation Prep', project: 'Project Beta', dueDate: 'Nov 15', initialCompleted: false },
-  { id: 'task5', title: 'Bug Fixes - Sprint 2.3', project: 'Mobile App', dueDate: 'Nov 18', initialCompleted: false },
-  { id: 'task6', title: 'Documentation Review', project: 'Knowledge Base', dueDate: 'Nov 22', initialCompleted: true },
-  { id: 'task7', title: 'Onboarding New Intern', project: 'HR Department', dueDate: 'Nov 25', initialCompleted: false },
-  { id: 'task8', title: 'Security Audit Follow-up', project: 'Infrastructure Team', dueDate: 'Nov 30', initialCompleted: false },
-];
+import { LayoutGrid, Loader2, AlertTriangle } from 'lucide-react'; 
+import type { TaskRecord } from '@/services/baserowService';
+import { getTasksForUserAction } from '@/app/actions/taskActions';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AllTasksPage() {
+  const [tasks, setTasks] = useState<TaskRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const fetchTasks = async (email: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await getTasksForUserAction(email);
+      if (result.success && result.tasks) {
+        setTasks(result.tasks);
+      } else {
+        setError(result.error || "Failed to load tasks.");
+        toast({ title: "Error", description: result.error || "Failed to load tasks.", variant: "destructive"});
+      }
+    } catch (e: any) {
+      setError(e.message || "An unexpected error occurred.");
+      toast({ title: "Error", description: e.message || "An unexpected error occurred.", variant: "destructive"});
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    const emailFromStorage = localStorage.getItem('currentUserEmail');
+    if (emailFromStorage) {
+      setCurrentUserEmail(emailFromStorage);
+      fetchTasks(emailFromStorage);
+    } else {
+      setError("User email not found. Please log in again.");
+      setIsLoading(false);
+      toast({ title: "Authentication Error", description: "User email not found.", variant: "destructive"});
+      // Optionally redirect to login: router.push('/');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
+
+  const handleTaskUpdate = () => {
+    if (currentUserEmail) {
+      fetchTasks(currentUserEmail); // Re-fetch tasks when one is updated
+    }
+  };
+
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <NewTopNav />
@@ -26,7 +64,7 @@ export default function AllTasksPage() {
           <div className="space-y-2">
             <div className="flex items-center space-x-3">
               <LayoutGrid className="h-10 w-10 text-primary" />
-              <h1 className="text-4xl font-bold tracking-tight">All Tasks</h1>
+              <h1 className="text-4xl font-bold tracking-tight">All Your Tasks</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
               Manage and track all your assigned tasks in one place.
@@ -34,18 +72,30 @@ export default function AllTasksPage() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {allTasksData.map(task => (
-            <TaskCard
-              key={task.id}
-              id={task.id}
-              title={task.title}
-              project={task.project}
-              dueDate={task.dueDate}
-              initialCompleted={task.initialCompleted}
-            />
-          ))}
-        </section>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-2">Loading tasks...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-10">
+            <AlertTriangle className="mx-auto h-12 w-12 text-destructive" />
+            <p className="mt-4 text-destructive">{error}</p>
+          </div>
+        ) : tasks.length === 0 ? (
+          <p className="text-center text-muted-foreground py-10">You have no tasks assigned to you.</p>
+        ) : (
+          <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {tasks.map(task => (
+              <TaskCard 
+                key={task.id} 
+                task={task} 
+                currentUserEmail={currentUserEmail}
+                onTaskUpdated={handleTaskUpdate} 
+              />
+            ))}
+          </section>
+        )}
       </main>
     </div>
   );

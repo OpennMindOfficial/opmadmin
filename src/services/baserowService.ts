@@ -27,6 +27,7 @@ const BASEROW_ACCOUNT_CHANGES_TABLE_ID = '542794';
 const BASEROW_NOTIFICATIONS_TABLE_ID = '542798';
 const BASEROW_WEBSITE_TRAFFIC_TABLE_ID = '542800';
 const BASEROW_AI_USAGE_TABLE_ID = '553904';
+const BASEROW_TASKS_TABLE_ID = '552540'; // New Tasks Table ID
 
 
 // Table IDs for Secure Page Access
@@ -59,8 +60,8 @@ export interface UserRecord extends BaseRecord {
   DOB?: string; 
   Class?: string; 
   AuthMethod?: string; 
-  FirebaseUID?: string; // Added for User Accounts page
-  Board?: string; // Added for User Accounts page
+  FirebaseUID?: string; 
+  Board?: string; 
 }
 
 export interface CeoUserRecord extends BaseRecord {
@@ -214,6 +215,17 @@ export interface AiUsageBaserowRecord extends BaseRecord {
   'Tokens used'?: number;
 }
 
+// Task Record for Table 552540
+export interface TaskRecord extends BaseRecord {
+  Task?: string;
+  Info?: string;
+  assigned_to?: string; // Assumed API field name for "assigned to"
+  Due?: string;
+  Completed?: "Yes" | "No" | string; // Allow string for flexibility from Baserow
+  Date_of_completion?: string; // Assumed API field name for "Date of completion"
+  Date_assigned?: string; // Assumed API field name for "Date assigned"
+}
+
 
 async function makeBaserowRequest(
   endpoint: string,
@@ -236,7 +248,7 @@ async function makeBaserowRequest(
     options.body = JSON.stringify(body);
   }
   
-  console.log(`[BaserowService] Request: ${method} ${url}`, body && (method === 'POST' || method === 'PATCH') ? `Body (first 200 chars): ${JSON.stringify(body, null, 2).substring(0,200)}` : '(No Body or GET/DELETE request)');
+  console.log(`[BaserowService] Request: ${method} ${url}`, body && (method === 'POST' || method === 'PATCH') ? `Body: ${JSON.stringify(body, null, 2)}` : '(No Body or GET/DELETE request)');
 
 
   try {
@@ -265,7 +277,7 @@ async function makeBaserowRequest(
     }
     
     const responseData = await response.json();
-    console.log(`[BaserowService] Response Data for ${method} ${url} (Type: ${typeof responseData}, Length (if array/string): ${Array.isArray(responseData) || typeof responseData === 'string' ? responseData.length : 'N/A'})`); 
+    console.log(`[BaserowService] Response Data for ${method} ${url}`, JSON.stringify(responseData).substring(0, 300) + (JSON.stringify(responseData).length > 300 ? '...' : ''));
     return responseData;
 
   } catch (error: any) {
@@ -734,6 +746,51 @@ export async function fetchAiUsageData(): Promise<AiUsageBaserowRecord[]> {
     return (data?.results || []) as AiUsageBaserowRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch AI usage data from table ${BASEROW_AI_USAGE_TABLE_ID}:`, error);
+    throw error;
+  }
+}
+
+// --- Tasks Service Functions (Table 552540) ---
+export async function fetchTasksForUser(userEmail: string): Promise<TaskRecord[]> {
+  // IMPORTANT: Verify the actual API field name for "assigned to". Using "assigned_to" as a placeholder.
+  // Baserow filter for "contains" is `filter__field_{field_id}__contains` or `filter__{field_name}__contains`
+  // However, for text fields, direct `contains` filter might not be available via field name directly in the list rows endpoint without knowing the field_id.
+  // A common approach for comma-separated values is to fetch all and filter client-side, or use a more complex filter if Baserow supports it well for text contains.
+  // For now, fetching all tasks and filtering client-side, which is NOT ideal for large datasets.
+  // A better Baserow filter would be `filter__assigned_to__contains=user@example.com` IF `assigned_to` is the correct field name.
+  // For simplicity now, I'll fetch all and let the action filter. This needs optimization for production.
+  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200&order_by=-updated_on`;
+  console.log(`--- Service: fetchTasksForUser (Table ID: ${BASEROW_TASKS_TABLE_ID}) for user: ${userEmail} ---`);
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    const allTasks = (data?.results || []) as TaskRecord[];
+    // Client-side filtering (temporary solution - should be done via Baserow filter if possible)
+    // Assumes assigned_to field exists and is correct
+    const userTasks = allTasks.filter(task => 
+        task.assigned_to && task.assigned_to.split(',').map(email => email.trim().toLowerCase()).includes(userEmail.toLowerCase())
+    );
+    console.log(`[BaserowService] Total tasks fetched: ${allTasks.length}, Tasks for ${userEmail}: ${userTasks.length}`);
+    return userTasks;
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch tasks from table ${BASEROW_TASKS_TABLE_ID}:`, error);
+    throw error;
+  }
+}
+
+export async function updateTask(taskId: number, updates: Partial<TaskRecord>): Promise<TaskRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/${taskId}/?user_field_names=true`;
+  console.log(`--- Service: updateTask (Table ID: ${BASEROW_TASKS_TABLE_ID}, Row ID: ${taskId}) ---`);
+  const fieldsToUpdate: { [key: string]: any } = {};
+  for (const key in updates) {
+    if (key !== 'id' && key !== 'order' && Object.prototype.hasOwnProperty.call(updates, key)) {
+      fieldsToUpdate[key] = (updates as any)[key];
+    }
+  }
+  console.log(`[BaserowService] Attempting to PATCH task ${taskId} with payload:`, JSON.stringify(fieldsToUpdate, null, 2));
+  try {
+    return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
+  } catch (error) {
+    console.error(`[BaserowService] Failed to update task ${taskId} in table ${BASEROW_TASKS_TABLE_ID}:`, error);
     throw error;
   }
 }

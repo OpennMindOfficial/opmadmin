@@ -7,19 +7,15 @@ import { Button } from '@/components/ui/button';
 import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { NewActionCard } from '@/components/dashboard/new-action-card';
 import { TaskCard } from '@/components/dashboard/task-card';
-import { Sparkles, ChevronDown, Pin, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit, Loader2, GanttChartSquare, DatabaseZap, Edit3, UserCheck } from 'lucide-react';
+import { Sparkles, ChevronDown, Pin, ArrowUpRight, NotebookPen, PlusCircle as PlusCircleIcon, Bug, FileText, ListPlus, BarChart3, FileQuestion, Library, Users, Star, PlugZap, TestTube2, UserCog, BellPlus, Activity as ActivityIconLucide, BrainCircuit, Loader2, GanttChartSquare, DatabaseZap, Edit3, UserCheck, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { LoginDialog } from '@/components/auth/LoginDialog';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { updateUserLastActive } from '@/app/actions/authActions';
+import { getTasksForUserAction } from '@/app/actions/taskActions'; // New import
+import type { TaskRecord } from '@/services/baserowService'; // New import
 import OpmImage from './opm.png';
-
-
-const homePageTasksData = [
-  { id: 'hpTask1', title: 'Finalize Q3 Report', project: 'Project Alpha', dueDate: 'Oct 28', initialCompleted: false },
-  { id: 'hpTask2', title: 'User Persona Workshop', project: 'Marketing Campaign', dueDate: 'Nov 05', initialCompleted: false },
-  { id: 'hpTask3', title: 'Develop API Endpoint', project: 'Platform Upgrade', dueDate: 'Nov 12', initialCompleted: false },
-];
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function DashboardRedesignPage() {
@@ -33,6 +29,32 @@ export default function DashboardRedesignPage() {
   const [greeting, setGreeting] = useState('Good morning');
   const [userFirstName, setUserFirstName] = useState('');
   const [isCeoLoggedIn, setIsCeoLoggedIn] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [assignedTasks, setAssignedTasks] = useState<TaskRecord[]>([]);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [tasksError, setTasksError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const fetchUserTasks = async (email: string) => {
+    setIsLoadingTasks(true);
+    setTasksError(null);
+    try {
+      const result = await getTasksForUserAction(email);
+      if (result.success && result.tasks) {
+        // Sort by Due date (ascending, assuming date strings are comparable or convert them)
+        // For simplicity, this example assumes string comparison works or they are already sorted.
+        // A more robust sort would parse dates.
+        const sortedTasks = result.tasks.sort((a, b) => (a.Due || "").localeCompare(b.Due || ""));
+        setAssignedTasks(sortedTasks.slice(0, 3)); // Show max 3 tasks
+      } else {
+        setTasksError(result.error || "Failed to load tasks.");
+      }
+    } catch (e: any) {
+      setTasksError(e.message || "An unexpected error occurred while fetching tasks.");
+    } finally {
+      setIsLoadingTasks(false);
+    }
+  };
 
   useEffect(() => {
     setIsClient(true); 
@@ -48,9 +70,11 @@ export default function DashboardRedesignPage() {
       setShowLoginDialog(false);
       setCurrentUserFullName(storedFullName || '');
       setIsCeoLoggedIn(storedIsCeo);
+      setCurrentUserEmail(storedEmail);
+      fetchUserTasks(storedEmail); // Fetch tasks for logged-in user
 
       if (!storedIsCeo) {
-        updateUserLastActive(userId) // No need to pass email if userId is primary
+        updateUserLastActive(userId) 
           .then(res => {
             if (res.success && res.userName) {
               setCurrentUserFullName(res.userName);
@@ -61,7 +85,7 @@ export default function DashboardRedesignPage() {
           .catch(err => console.error("Failed to update last active time on revisit:", err));
       }
     } else {
-      setIsAuthenticated(false); // Explicitly set for clarity
+      setIsAuthenticated(false); 
       setShowLoginDialog(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,6 +128,7 @@ export default function DashboardRedesignPage() {
     setShowLoginDialog(false);
     setCurrentUserFullName(userName);
     setIsCeoLoggedIn(!!isCeo);
+    setCurrentUserEmail(email);
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
     if (userId) localStorage.setItem('userId', userId.toString());
@@ -115,6 +140,7 @@ export default function DashboardRedesignPage() {
     } else {
         localStorage.removeItem('isCeoLoggedIn');
     }
+    fetchUserTasks(email); // Fetch tasks on login
   };
 
   const handleFirstTimeLogin = (email: string, userName: string, userId?: number, userRole?: string, authMethod?: string) => {
@@ -131,11 +157,13 @@ export default function DashboardRedesignPage() {
     setIsAuthenticated(true);
     setShowChangePasswordDialog(false);
     setCurrentUserFullName(userName);
-    setIsCeoLoggedIn(false);
+    setIsCeoLoggedIn(false); // Assuming first time login is never CEO for password change flow
+    setCurrentUserEmail(email);
     localStorage.setItem('currentUserEmail', email);
     localStorage.setItem('currentUserFullName', userName);
     if (userId) localStorage.setItem('userId', userId.toString());
     localStorage.removeItem('isCeoLoggedIn');
+    fetchUserTasks(email); // Fetch tasks after password change & login
   };
 
   const handleLogout = () => {
@@ -153,7 +181,16 @@ export default function DashboardRedesignPage() {
     setCurrentUserFullName('');
     setUserFirstName('');
     setIsCeoLoggedIn(false);
+    setCurrentUserEmail(null);
+    setAssignedTasks([]);
   };
+
+  const handleTaskUpdate = () => {
+    if (currentUserEmail) {
+      fetchUserTasks(currentUserEmail); // Re-fetch tasks when one is updated
+    }
+  };
+
 
   if (!isClient) {
     return (
@@ -186,7 +223,6 @@ export default function DashboardRedesignPage() {
       <LoginDialog
         isOpen={showLoginDialog}
         onOpenChange={(isOpen) => {
-          // Prevent closing the dialog unless authenticated
           if (!isOpen && !isAuthenticated) {
             setShowLoginDialog(true); 
           } else {
@@ -397,18 +433,31 @@ export default function DashboardRedesignPage() {
                 </Link>
               </Button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {homePageTasksData.map(task => (
-                <TaskCard
-                  key={task.id}
-                  id={task.id}
-                  title={task.title}
-                  project={task.project}
-                  dueDate={task.dueDate}
-                  initialCompleted={task.initialCompleted}
-                />
-              ))}
-            </div>
+            {isLoadingTasks ? (
+              <div className="flex justify-center items-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                 <p className="ml-2 text-muted-foreground">Loading your tasks...</p>
+              </div>
+            ) : tasksError ? (
+                <div className="text-center py-10 text-destructive bg-destructive/10 p-4 rounded-md">
+                    <AlertTriangle className="mx-auto h-8 w-8" />
+                    <p className="mt-2 font-semibold">Could not load tasks</p>
+                    <p className="text-sm">{tasksError}</p>
+                </div>
+            ) : assignedTasks.length === 0 ? (
+              <p className="text-center text-muted-foreground py-10">No tasks assigned to you at the moment. Enjoy your free time!</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6"> 
+                {assignedTasks.map(task => (
+                  <TaskCard 
+                    key={task.id} 
+                    task={task} 
+                    currentUserEmail={currentUserEmail}
+                    onTaskUpdated={handleTaskUpdate} 
+                  />
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Latest Activity Section */}
