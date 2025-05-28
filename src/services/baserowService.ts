@@ -754,7 +754,7 @@ export async function fetchAiUsageData(): Promise<AiUsageBaserowRecord[]> {
 
 // --- Tasks Service Functions (Table 552540) ---
 export async function fetchTasksForUser(userEmail: string): Promise<TaskRecord[]> {
-  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200&order_by=-created_on`;
+  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200`; // Removed order_by for now
   console.log(`--- Service: fetchTasksForUser (Table ID: ${BASEROW_TASKS_TABLE_ID}) for user: ${userEmail} ---`);
   try {
     const data = await makeBaserowRequest(endpoint);
@@ -788,6 +788,3 @@ export async function updateTask(taskId: number, updates: Partial<TaskRecord>): 
     throw error;
   }
 }
-
-
-    
