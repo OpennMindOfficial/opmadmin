@@ -16,25 +16,38 @@ import {
 } from '@/components/ui/alert-dialog';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { TaskRecord } from '@/services/baserowService'; // Assuming TaskRecord is defined here
+import type { TaskRecord } from '@/services/baserowService'; 
 import { markTaskCompleteAction } from '@/app/actions/taskActions';
 import { useToast } from '@/hooks/use-toast';
 
 interface TaskCardProps {
   task: TaskRecord;
   currentUserEmail: string | null;
-  onTaskUpdated?: () => void; // Callback to refresh task list
+  onTaskUpdated?: () => void; 
 }
 
 export function TaskCard({ task, currentUserEmail, onTaskUpdated }: TaskCardProps) {
-  const [isLocallyCompleted, setIsLocallyCompleted] = useState(task.Completed === "Yes");
+  const [isCurrentUserCompleted, setIsCurrentUserCompleted] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsLocallyCompleted(task.Completed === "Yes");
-  }, [task.Completed]);
+    if (currentUserEmail && task['assigned to'] && typeof task.Completed === 'string') {
+      const assignees = task['assigned to'].split(',').map(e => e.trim().toLowerCase());
+      const completedStatuses = task.Completed.split(',');
+      const userIndex = assignees.indexOf(currentUserEmail.toLowerCase());
+      
+      if (userIndex !== -1 && completedStatuses[userIndex]?.trim().toLowerCase() === 'yes') {
+        setIsCurrentUserCompleted(true);
+      } else {
+        setIsCurrentUserCompleted(false);
+      }
+    } else if (currentUserEmail && task['assigned to'] && !task.Completed) {
+        // If task.Completed is null/undefined, assume not completed by current user
+        setIsCurrentUserCompleted(false);
+    }
+  }, [task, currentUserEmail]);
 
   const handleMarkComplete = async () => {
     if (!currentUserEmail) {
@@ -46,9 +59,9 @@ export function TaskCard({ task, currentUserEmail, onTaskUpdated }: TaskCardProp
     try {
       const result = await markTaskCompleteAction(task.id, currentUserEmail);
       if (result.success && result.updatedTask) {
-        toast({ title: "Task Updated", description: `"${task.Task}" marked as complete.`});
-        setIsLocallyCompleted(true);
-        onTaskUpdated?.(); // Trigger refresh in parent
+        toast({ title: "Task Updated", description: `"${task.Task}" marked as complete by you.`});
+        setIsCurrentUserCompleted(true); // Update local state immediately
+        onTaskUpdated?.(); 
       } else {
         toast({ title: "Error", description: result.error || "Failed to update task.", variant: "destructive" });
       }
@@ -60,8 +73,6 @@ export function TaskCard({ task, currentUserEmail, onTaskUpdated }: TaskCardProp
     }
   };
 
-  // Field name assumptions for Baserow: Task, Info, Due, Completed
-  // Verify these against your Baserow table's API documentation.
   const taskTitle = task.Task || "Untitled Task";
   const taskInfo = task.Info || "No additional info";
   const dueDate = task.Due || "N/A";
@@ -71,18 +82,18 @@ export function TaskCard({ task, currentUserEmail, onTaskUpdated }: TaskCardProp
       <Card
         className={cn(
           "h-40 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 p-4 flex flex-col justify-between",
-          isLocallyCompleted ? "bg-green-100 border-green-300 text-green-900 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300" : "bg-card"
+          isCurrentUserCompleted ? "bg-green-100 border-green-300 text-green-900 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300" : "bg-card"
         )}
       >
         <div>
-          <CardTitle className={cn("text-md font-semibold", isLocallyCompleted && "line-through")}>{taskTitle}</CardTitle>
-          <p className={cn("text-sm mt-1 truncate", isLocallyCompleted ? "text-green-700 dark:text-green-400" : "text-muted-foreground")}>{taskInfo}</p>
+          <CardTitle className={cn("text-md font-semibold", isCurrentUserCompleted && "line-through")}>{taskTitle}</CardTitle>
+          <p className={cn("text-sm mt-1 truncate", isCurrentUserCompleted ? "text-green-700 dark:text-green-400" : "text-muted-foreground")}>{taskInfo}</p>
         </div>
         <div className="flex items-center justify-between">
-          <span className={cn("text-xs", isLocallyCompleted ? "text-green-700 dark:text-green-400" : "text-muted-foreground")}>
+          <span className={cn("text-xs", isCurrentUserCompleted ? "text-green-700 dark:text-green-400" : "text-muted-foreground")}>
             Due: {dueDate}
           </span>
-          {!isLocallyCompleted && (
+          {!isCurrentUserCompleted && (
             <Button
               variant="ghost"
               size="icon"
@@ -102,7 +113,7 @@ export function TaskCard({ task, currentUserEmail, onTaskUpdated }: TaskCardProp
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Completion</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you completed the task: "{taskTitle}"?
+              Are you sure you completed your part of the task: "{taskTitle}"?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

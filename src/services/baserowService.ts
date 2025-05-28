@@ -7,7 +7,7 @@ import { formatISO } from 'date-fns';
 const BASEROW_API_URL = 'https://api.baserow.io';
 const BASEROW_API_KEY = '1GWSYGr6hU9Gv7W3SBk7vNlvmUzWa8Io'; 
 
-// Table ID for team/user login and general user data (now used for Account Settings)
+// Table ID for team/user login and general user data
 const BASEROW_TEAM_TABLE_ID = '551777'; 
 
 // Table ID for CEO specific login
@@ -192,11 +192,11 @@ export interface ProUserSpecificRecord extends UserRecord {
 
 export interface NotificationBaserowRecord extends BaseRecord {
   Title?: string;
-  Desc?: string;
-  PageToTakeTo?: string;
-  ShownTo?: string;
-  ShownFrom?: string;
-  ShownTill?: string;
+  Desc?: string; // Description of the notification
+  PageToTakeTo?: string; // URL
+  ShownTo?: string; // e.g., "All Users", "Group:Admins", "User:email@example.com"
+  ShownFrom?: string; // ISO Date string or YYYY-MM-DD
+  ShownTill?: string; // ISO Date string or YYYY-MM-DD
   Views?: number;
   Clicks?: number;
 }
@@ -222,9 +222,9 @@ export interface TaskRecord extends BaseRecord {
   Info?: string;
   'assigned to'?: string; 
   Due?: string;
-  Completed?: "Yes" | "No" | string; 
-  'Date of completion'?: string; 
-  'Date assigned'?: string; 
+  Completed?: string; // Comma-separated "Yes" / "No"
+  Date_of_completion?: string; // Comma-separated "userEmail:timestamp"
+  Date_assigned?: string; 
 }
 
 
@@ -279,7 +279,7 @@ async function makeBaserowRequest(
     
     const responseData = await response.json();
     const responsePreview = JSON.stringify(responseData);
-    // console.log(`[BaserowService] Response Data for ${method} ${url}`, responsePreview.substring(0, 300) + (responsePreview.length > 300 ? '...' : ''));
+    console.log(`[BaserowService] Response Data for ${method} ${url}`, responsePreview.substring(0, 300) + (responsePreview.length > 300 ? '...' : ''));
     return responseData;
 
   } catch (error: any) {
@@ -311,7 +311,6 @@ export async function getUserById(rowId: number): Promise<UserRecord | null> {
    console.log(`--- Service: getUserById (Table ID: ${BASEROW_TEAM_TABLE_ID}, Row ID: ${rowId}) ---`);
    try {
     const data = await makeBaserowRequest(endpoint, 'GET');
-    // console.log(`[BaserowService] User data for ID ${rowId}:`, data);
     return data as UserRecord;
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch user by ID ${rowId} from table ${BASEROW_TEAM_TABLE_ID}:`, error);
@@ -417,7 +416,7 @@ export async function createSubjectNote(noteData: { Subject?: string; Chapter?: 
 
 export async function updateSubjectNote(
   rowId: number, 
-  updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'created_on' | 'updated_on'>> 
+  updates: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'created_on' | 'updated_on' | 'ID'>> 
 ): Promise<SubjectNoteRecord | null> {
   const endpoint = `/api/database/rows/table/${BASEROW_SUBJECT_NOTES_TABLE_ID}/${rowId}/?user_field_names=true`;
   console.log(`--- Service: updateSubjectNote (Table ID: ${BASEROW_SUBJECT_NOTES_TABLE_ID}, Row ID: ${rowId}) ---`);
@@ -624,6 +623,10 @@ export async function fetchApiTestConfigs(): Promise<ApiTestConfigRecord[]> {
 // --- Service Functions for Secure Page Access (Tables 552919, 552920) ---
 export async function fetchFirstPagePassword(identifier?: string): Promise<PagePasswordRecord | null> {
   let endpoint = `/api/database/rows/table/${BASEROW_PAGE_PASSWORD_TABLE_ID}/?user_field_names=true&size=1`;
+  // If you want to filter by an identifier:
+  // if (identifier) {
+  //   endpoint += `&filter__Identifier__equal=${encodeURIComponent(identifier)}`;
+  // }
   try {
     const data = await makeBaserowRequest(endpoint);
     if (data && data.results && data.results.length > 0) {
@@ -753,6 +756,23 @@ export async function fetchAiUsageData(): Promise<AiUsageBaserowRecord[]> {
 }
 
 // --- Tasks Service Functions (Table 552540) ---
+export async function fetchTaskById(taskId: number): Promise<TaskRecord | null> {
+  const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/${taskId}/?user_field_names=true`;
+  console.log(`--- Service: fetchTaskById (Table ID: ${BASEROW_TASKS_TABLE_ID}, Task ID: ${taskId}) ---`);
+  try {
+    const data = await makeBaserowRequest(endpoint, 'GET');
+    if (data) {
+      console.log(`[BaserowService] Task fetched for ID ${taskId}:`, JSON.stringify(data, null, 2));
+      return data as TaskRecord;
+    }
+    console.log(`[BaserowService] No task found for ID ${taskId} in table ${BASEROW_TASKS_TABLE_ID}.`);
+    return null;
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch task by ID ${taskId} from table ${BASEROW_TASKS_TABLE_ID}:`, error);
+    throw error;
+  }
+}
+
 export async function fetchTasksForUser(userEmail: string): Promise<TaskRecord[]> {
   const endpoint = `/api/database/rows/table/${BASEROW_TASKS_TABLE_ID}/?user_field_names=true&size=200`;
   console.log(`--- Service: fetchTasksForUser (Table ID: ${BASEROW_TASKS_TABLE_ID}) for user: ${userEmail} ---`);
@@ -760,13 +780,12 @@ export async function fetchTasksForUser(userEmail: string): Promise<TaskRecord[]
     const data = await makeBaserowRequest(endpoint);
     const allTasks = (data?.results || []) as TaskRecord[];
     
-    // Log the first task (if any) to inspect its structure
     if (allTasks.length > 0) {
-      console.log('[BaserowService] Raw first task object:', JSON.stringify(allTasks[0], null, 2));
+      console.log('[BaserowService] Raw first task object from fetchTasksForUser:', JSON.stringify(allTasks[0], null, 2));
     }
 
     const userTasks = allTasks.filter(task => {
-        const assignedToField = task['assigned to']; // Use bracket notation for field with space
+        const assignedToField = task['assigned to']; 
         if (assignedToField && typeof assignedToField === 'string') {
             return assignedToField.split(',').map(email => email.trim().toLowerCase()).includes(userEmail.toLowerCase());
         }
@@ -786,20 +805,11 @@ export async function updateTask(taskId: number, updates: Partial<TaskRecord>): 
   const fieldsToUpdate: { [key: string]: any } = {};
   for (const key in updates) {
     if (key !== 'id' && key !== 'order' && Object.prototype.hasOwnProperty.call(updates, key)) {
+      // Use the exact key from the updates object, assuming it matches Baserow field names
       fieldsToUpdate[key] = (updates as any)[key];
     }
   }
-  // Ensure field names sent to Baserow match what the API expects (e.g., "Date of completion")
-  if (fieldsToUpdate.Date_of_completion && !fieldsToUpdate['Date of completion']) {
-      fieldsToUpdate['Date of completion'] = fieldsToUpdate.Date_of_completion;
-      delete fieldsToUpdate.Date_of_completion;
-  }
-  if (fieldsToUpdate.Date_assigned && !fieldsToUpdate['Date assigned']) {
-      fieldsToUpdate['Date assigned'] = fieldsToUpdate.Date_assigned;
-      delete fieldsToUpdate.Date_assigned;
-  }
-
-
+  
   console.log(`[BaserowService] Attempting to PATCH task ${taskId} with payload:`, JSON.stringify(fieldsToUpdate, null, 2));
   try {
     return await makeBaserowRequest(endpoint, 'PATCH', fieldsToUpdate);
@@ -808,4 +818,3 @@ export async function updateTask(taskId: number, updates: Partial<TaskRecord>): 
     throw error;
   }
 }
-
