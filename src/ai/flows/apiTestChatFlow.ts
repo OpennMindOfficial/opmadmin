@@ -49,7 +49,7 @@ User's message: {{{userInput}}}
 
 Respond to the user's message.
 If the user asks you to perform a specific action (e.g., "GET /users", "check status"), explain that you are in a simulation.
-Describe what you *would* do or check if this were a real test environment, referencing the API details and the simulated 'OPENAI_API_KEY' (which is '{{{apiKey}}}') where appropriate.
+Describe what you *would* do or check if this were a real test environment, referencing the API details and the simulated 'OPENAI_API_KEY' (which is '{{{apiKey}}}' for this session) where appropriate.
 For example, if the user says "Test the endpoint", you might respond with:
 "Okay, if I were to test this '{{{apiConfigType}}}' API for '{{{apiUseCase}}}' using the simulated 'OPENAI_API_KEY' (which is '{{{apiKey}}}' for this session), I would typically start by sending a basic health check request (e.g., a GET request to a status endpoint if available). Then, I'd proceed with requests relevant to the use case, like fetching data, creating resources, etc., ensuring I check for expected status codes (200, 201, 400, 401, 403, 500), response times, and data integrity based on the API's specification."
 
