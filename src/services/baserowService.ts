@@ -26,6 +26,7 @@ const BASEROW_API_TEST_CONFIG_TABLE_ID = '542783';
 const BASEROW_ACCOUNT_CHANGES_TABLE_ID = '542794'; 
 const BASEROW_NOTIFICATIONS_TABLE_ID = '542798';
 const BASEROW_WEBSITE_TRAFFIC_TABLE_ID = '542800';
+const BASEROW_AI_USAGE_TABLE_ID = '553904';
 
 
 // Table IDs for Secure Page Access
@@ -58,6 +59,8 @@ export interface UserRecord extends BaseRecord {
   DOB?: string; 
   Class?: string; 
   AuthMethod?: string; 
+  FirebaseUID?: string; // Added for User Accounts page
+  Board?: string; // Added for User Accounts page
 }
 
 export interface CeoUserRecord extends BaseRecord {
@@ -201,6 +204,14 @@ export interface WebsiteTrafficBaserowRecord extends BaseRecord {
   'Avg active time'?: string; // e.g., "5m 30s"
   'Number of users'?: number;
   'Logged in users'?: number;
+}
+
+export interface AiUsageBaserowRecord extends BaseRecord {
+  'Number of Messages sent'?: number;
+  Date?: string;
+  'Number of users'?: number;
+  'Most asked subject'?: string;
+  'Tokens used'?: number;
 }
 
 
@@ -711,6 +722,18 @@ export async function fetchWebsiteTrafficData(): Promise<WebsiteTrafficBaserowRe
     return (data?.results || []) as WebsiteTrafficBaserowRecord[];
   } catch (error) {
     console.error(`[BaserowService] Failed to fetch website traffic data from table ${BASEROW_WEBSITE_TRAFFIC_TABLE_ID}:`, error);
+    throw error;
+  }
+}
+
+// --- AI Usage Service Functions (Table 553904) ---
+export async function fetchAiUsageData(): Promise<AiUsageBaserowRecord[]> {
+  const endpoint = `/api/database/rows/table/${BASEROW_AI_USAGE_TABLE_ID}/?user_field_names=true&size=200&order_by=-Date`;
+  try {
+    const data = await makeBaserowRequest(endpoint);
+    return (data?.results || []) as AiUsageBaserowRecord[];
+  } catch (error) {
+    console.error(`[BaserowService] Failed to fetch AI usage data from table ${BASEROW_AI_USAGE_TABLE_ID}:`, error);
     throw error;
   }
 }
