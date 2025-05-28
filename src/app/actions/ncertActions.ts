@@ -8,6 +8,7 @@ import {
   type NcertSourceRecord,
 } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
+import { logActivityAction } from './activityLogActions';
 
 interface GetNcertSourcesResult {
   success: boolean;
@@ -36,12 +37,27 @@ export async function addNcertSourceAction(data: {
   Chapter?: string;
   Book?: string;
   Audio?: string;
+  userNameForLog?: string;
 }): Promise<AddNcertSourceResult> {
   try {
-    const newSource = await createNcertSource(data);
+    const ncertPayload = {
+        Subject: data.Subject,
+        Chapter: data.Chapter,
+        Book: data.Book,
+        Audio: data.Audio,
+    };
+    const newSource = await createNcertSource(ncertPayload);
     if (!newSource) {
       throw new Error('Failed to create NCERT source in Baserow.');
     }
+
+    // Log activity
+    await logActivityAction({
+      Name: data.userNameForLog || newSource.Subject || "User",
+      Did: 'added NCERT source',
+      Task: `Subject: ${newSource.Subject}, Chapter: ${newSource.Chapter}`,
+    });
+
     revalidatePath('/actions/ncert-sources');
     return { success: true, source: newSource };
   } catch (error: any) {
@@ -49,3 +65,4 @@ export async function addNcertSourceAction(data: {
     return { success: false, error: error.message || 'An unexpected error occurred while adding the NCERT source.' };
   }
 }
+

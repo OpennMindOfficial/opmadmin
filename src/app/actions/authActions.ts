@@ -14,6 +14,7 @@ import {
   getUserById,
 } from '@/services/baserowService';
 import { format } from 'date-fns';
+import { logActivityAction } from './activityLogActions';
 
 interface LoginResult {
   success: boolean;
@@ -135,6 +136,13 @@ export async function changePassword(userId: number, newPassword_plaintext: stri
     if (!updatedUser) { 
         return { success: false, error: 'Failed to update password. Please try again.' };
     }
+    
+    // Log activity
+    await logActivityAction({
+        Name: updatedUser.Name || updatedUser.Email,
+        Did: 'changed password',
+        Task: 'User Account',
+    });
 
     return { success: true };
   } catch (error: any) {
@@ -167,8 +175,8 @@ export async function changePasswordWithVerification(
       return { success: false, error: 'Current password does not match.' };
     }
 
-    if (newPassword_plaintext.length < 8) {
-      return { success: false, error: 'New password must be at least 8 characters.' };
+    if (newPassword_plaintext.length < 6) { // Consistent with settings page
+      return { success: false, error: 'New password must be at least 6 characters.' };
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword_plaintext, 10);
@@ -183,8 +191,17 @@ export async function changePasswordWithVerification(
     if (!updatedUser) {
       return { success: false, error: 'Failed to update password. Please try again.' };
     }
+
+    // Log activity
+    await logActivityAction({
+        Name: updatedUser.Name || updatedUser.Email,
+        Did: 'changed password',
+        Task: 'User Account (via settings)',
+    });
+
     return { success: true };
-  } catch (error: any) {
+  } catch (error: any)
+{
     console.error('Password change with verification error:', error);
     return { success: false, error: error.message || 'An unexpected error occurred.' };
   }
@@ -270,7 +287,7 @@ interface UpdateProfilePayload {
     name?: string;
     email?: string;
     dob?: string;
-    selectedClass?: string; // Baserow field name is 'Class'
+    // selectedClass?: string; // Baserow field name is 'Class' // Class update is disabled
     authMethod?: string; // Not directly updated, but used for logic
 }
 
@@ -291,11 +308,9 @@ export async function updateUserProfile(userId: number, payload: UpdateProfilePa
     const updates: Partial<UserRecord> = {};
     if (payload.name) updates.Name = payload.name;
     if (payload.dob) updates.DOB = payload.dob;
-    // if (payload.selectedClass) updates.Class = payload.selectedClass; // Class update disabled in example
+    // if (payload.selectedClass) updates.Class = payload.selectedClass; 
 
-    // Handle email update only if authMethod is 'email' and email has changed
     if (payload.email && userToUpdate.AuthMethod === 'email' && payload.email.toLowerCase() !== userToUpdate.Email.toLowerCase()) {
-        // Check if new email already exists
         const existingUserWithNewEmail = await getUserByEmail(payload.email);
         if (existingUserWithNewEmail && existingUserWithNewEmail.id !== userId) {
             return { success: false, error: 'This email is already associated with another account.' };
@@ -304,7 +319,7 @@ export async function updateUserProfile(userId: number, payload: UpdateProfilePa
     }
     
     if (Object.keys(updates).length === 0) {
-      return { success: true, updatedUser: userToUpdate, error: "No changes to update." }; // No actual DB call needed
+      return { success: true, updatedUser: userToUpdate, error: "No changes to update." }; 
     }
 
     const updatedUser = await updateUser(userId, updates);
@@ -312,11 +327,18 @@ export async function updateUserProfile(userId: number, payload: UpdateProfilePa
     if (!updatedUser) {
         return { success: false, error: 'Failed to update profile.' };
     }
+
+    // Log activity
+    await logActivityAction({
+        Name: updatedUser.Name || updatedUser.Email,
+        Did: 'updated profile details',
+        Task: `User: ${updatedUser.Name || updatedUser.Email}`,
+    });
     
     return { success: true, updatedUser };
   } catch (error: any) {
     console.error(`Error updating profile for userId ${userId}:`, error);
-    if (error.message.includes("already associated")) { // Specific error from Baserow check
+    if (error.message.includes("already associated")) { 
         return { success: false, error: error.message };
     }
     return { success: false, error: 'An unexpected error occurred while updating profile.' };
@@ -352,3 +374,4 @@ export async function fetchTeamInfo(): Promise<FetchTeamInfoResult> {
     return { success: false, error: 'Failed to fetch team information.' };
   }
 }
+

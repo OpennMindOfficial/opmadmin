@@ -8,6 +8,7 @@ import {
   type NotificationBaserowRecord,
 } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
+import { logActivityAction } from './activityLogActions';
 
 interface GetNotificationsResult {
   success: boolean;
@@ -40,6 +41,7 @@ export interface NotificationFormData {
   PageToTakeTo?: string;
   ShownFrom?: string;
   ShownTill?: string;
+  userNameForLog?: string;
 }
 
 export async function sendNotificationAction(data: NotificationFormData): Promise<SendNotificationResult> {
@@ -51,15 +53,13 @@ export async function sendNotificationAction(data: NotificationFormData): Promis
       shownToValue = `User:${data.TargetIdentifier}`;
     }
 
-    // Prepare payload for Baserow, excluding fields not directly mapped or handled by Baserow (like id, order, created_on, etc.)
     const payload: Omit<NotificationBaserowRecord, 'id' | 'order' | 'created_on' | 'updated_on' | 'Views' | 'Clicks'> = {
       Title: data.Title,
       Desc: data.Message,
-      PageToTakeTo: data.PageToTakeTo || undefined, // Send undefined if empty string
+      PageToTakeTo: data.PageToTakeTo || undefined,
       ShownTo: shownToValue,
       ShownFrom: data.ShownFrom || undefined, 
       ShownTill: data.ShownTill || undefined,
-      // Views and Clicks are defaulted to 0 by the createNotification service function
     };
     
     console.log("Payload for sendNotificationAction:", payload);
@@ -68,6 +68,14 @@ export async function sendNotificationAction(data: NotificationFormData): Promis
     if (!newNotification) {
       throw new Error('Failed to create notification in Baserow.');
     }
+
+    // Log activity
+    await logActivityAction({
+      Name: data.userNameForLog || "System",
+      Did: 'sent notification',
+      Task: `Title: ${newNotification.Title || 'N/A'} to ${newNotification.ShownTo || 'N/A'}`,
+    });
+    
     revalidatePath('/actions/add-notifications');
     return { success: true, notification: newNotification };
   } catch (error: any) {
@@ -75,3 +83,4 @@ export async function sendNotificationAction(data: NotificationFormData): Promis
     return { success: false, error: error.message || 'An unexpected error occurred while sending the notification.' };
   }
 }
+

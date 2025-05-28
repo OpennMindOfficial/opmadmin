@@ -9,6 +9,7 @@ import {
   type FetchFactsResponse,
 } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
+import { logActivityAction } from './activityLogActions';
 
 interface GetFactsResult {
   success: boolean;
@@ -41,12 +42,27 @@ export async function addFactAction(data: {
   Fact?: string;
   Image?: string;
   Source?: string;
+  userNameForLog?: string;
 }): Promise<AddFactResult> {
   try {
-    const newFact = await createFact(data);
+    const factPayload = {
+        Category: data.Category,
+        Fact: data.Fact,
+        Image: data.Image,
+        Source: data.Source,
+    };
+    const newFact = await createFact(factPayload);
     if (!newFact) {
       throw new Error('Failed to create fact in Baserow.');
     }
+
+    // Log activity
+    await logActivityAction({
+      Name: data.userNameForLog || newFact.Category || "User",
+      Did: 'added new fact',
+      Task: `Category: ${newFact.Category || 'N/A'} - Fact: ${(newFact.Fact || '').substring(0, 30)}...`,
+    });
+
     revalidatePath('/actions/add-facts');
     return { success: true, fact: newFact };
   } catch (error: any) {
@@ -54,3 +70,4 @@ export async function addFactAction(data: {
     return { success: false, error: error.message || 'An unexpected error occurred while adding the fact.' };
   }
 }
+

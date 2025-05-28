@@ -4,6 +4,7 @@
 import { fetchTaskById, updateTask, type TaskRecord, fetchTasksForUser } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
 import { formatISO } from 'date-fns';
+import { logActivityAction } from './activityLogActions';
 
 interface GetTasksResult {
   success: boolean;
@@ -129,6 +130,13 @@ export async function markTaskCompleteAction(taskId: number, currentUserEmail: s
         console.warn(`[markTaskCompleteAction] POTENTIAL DATA MISMATCH for task ${taskId}, user ${currentUserEmail}. Baserow response might not fully reflect intended changes for this user's slot. Sent Completed: "${newCompletedStatus}", Received: "${updatedTaskResponse.Completed}". Sent Date: "${newDateOfCompletion}", Received: "${updatedTaskResponse.Date_of_completion}"`);
     }
 
+    // Log activity
+    await logActivityAction({
+      Name: currentUserEmail, // Using email as user identifier
+      Did: 'completed task',
+      Task: task.Task || 'Untitled Task',
+    });
+
     revalidatePath('/');
     revalidatePath('/tasks');
     console.log('[markTaskCompleteAction] Paths revalidated.');
@@ -146,3 +154,4 @@ export async function markTaskCompleteAction(taskId: number, currentUserEmail: s
     return { success: false, error: detailedErrorMessage };
   }
 }
+

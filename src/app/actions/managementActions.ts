@@ -16,6 +16,7 @@ import {
   type PerformanceSubjectDataRecord, // New import
 } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
+import { logActivityAction } from './activityLogActions';
 
 // --- Add Subject Actions ---
 interface GetSubjectsResult {
@@ -43,12 +44,27 @@ export async function createSubjectAction(data: {
   Topics?: string;
   Chapters?: string;
   'Topics divided'?: string;
+  userNameForLog?: string;
 }): Promise<CreateSubjectResult> {
   try {
-    const newSubject = await createNewSubject(data);
+    const newSubjectPayload = { 
+        Subject: data.Subject, 
+        Topics: data.Topics, 
+        Chapters: data.Chapters, 
+        'Topics divided': data['Topics divided'] 
+    };
+    const newSubject = await createNewSubject(newSubjectPayload);
     if (!newSubject) {
       throw new Error('Failed to create subject in Baserow or received incomplete data.');
     }
+
+    // Log activity
+    await logActivityAction({
+      Name: data.userNameForLog || newSubject.Subject,
+      Did: 'added new subject',
+      Task: newSubject.Subject,
+    });
+
     revalidatePath('/actions/add-subject');
     return { success: true, subject: newSubject };
   } catch (error: any) {
@@ -99,13 +115,22 @@ interface UpdateAboutUsResult {
 }
 export async function updateAboutUsContentAction(
   data: { Mission: string; Story: string },
-  rowId: number = 1 // Assuming a single row for About Us content or a configurable one
+  rowId: number = 1, // Assuming a single row for About Us content or a configurable one
+  userNameForLog?: string
 ): Promise<UpdateAboutUsResult> {
   try {
     const updatedContent = await updateAboutUsData(rowId, data);
     if (!updatedContent) {
       throw new Error('Failed to update About Us content in Baserow or received incomplete data.');
     }
+
+    // Log activity
+    await logActivityAction({
+        Name: userNameForLog || "Admin",
+        Did: 'updated About Us page content',
+        Task: 'About Us Page',
+    });
+
     revalidatePath('/actions/edit-about-us');
     return { success: true, content: updatedContent };
   } catch (error: any) {

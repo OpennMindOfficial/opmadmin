@@ -8,6 +8,7 @@ import {
   type QuestionRecord,
 } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
+import { logActivityAction } from './activityLogActions';
 
 interface GetQuestionsResult {
   success: boolean;
@@ -38,6 +39,7 @@ export async function addQuestionAction(data: {
   Type: string;
   Questions: string; // Comma-separated string
   Solutions: string; // Comma-separated string
+  userNameForLog?: string;
 }): Promise<AddQuestionResult> {
   try {
     // Prepare payload for Baserow
@@ -53,6 +55,14 @@ export async function addQuestionAction(data: {
     if (!newQuestionEntry) {
       throw new Error('Failed to create question entry in Baserow.');
     }
+
+    // Log activity
+    await logActivityAction({
+      Name: data.userNameForLog || newQuestionEntry.Subject || "User",
+      Did: 'added questions to QB',
+      Task: `Subject: ${newQuestionEntry.Subject}, Chapter: ${newQuestionEntry.ChapterID}`,
+    });
+
     revalidatePath('/actions/add-questions');
     return { success: true, question: newQuestionEntry };
   } catch (error: any) {
@@ -60,3 +70,4 @@ export async function addQuestionAction(data: {
     return { success: false, error: error.message || 'An unexpected error occurred while adding the question(s).' };
   }
 }
+

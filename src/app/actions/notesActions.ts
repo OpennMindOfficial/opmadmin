@@ -10,6 +10,7 @@ import {
   type SubjectNoteRecord
 } from '@/services/baserowService';
 import { revalidatePath } from 'next/cache';
+import { logActivityAction } from './activityLogActions';
 
 interface GetNotesResult {
   success: boolean;
@@ -37,6 +38,8 @@ export async function addSubjectNoteAction(data: {
   subject: string;
   chapter: string;
   notes: string;
+  // Assuming user's name/email might be passed for logging if available from client
+  userNameForLog?: string; 
 }): Promise<AddNoteResult> {
   console.log('--- addSubjectNoteAction: INITIATED ---');
   console.log('Received data for add:', JSON.stringify(data, null, 2));
@@ -56,6 +59,13 @@ export async function addSubjectNoteAction(data: {
       return { success: false, error: 'Failed to create note in Baserow or received incomplete/invalid data.' };
     }
 
+    // Log activity
+    await logActivityAction({
+      Name: data.userNameForLog || createdNote.Subject || "User",
+      Did: 'added new note for subject',
+      Task: `${createdNote.Subject} - ${createdNote.Chapter}`,
+    });
+
     revalidatePath('/actions/create-subject-notes');
     console.log('addSubjectNoteAction successful, path revalidated.');
     console.log('--- addSubjectNoteAction: COMPLETED (Success) ---');
@@ -72,7 +82,7 @@ interface DeleteNoteResult {
   error?: string;
 }
 
-export async function deleteSubjectNoteAction(id: number): Promise<DeleteNoteResult> {
+export async function deleteSubjectNoteAction(id: number, noteSubject?: string, noteChapter?: string, userNameForLog?: string): Promise<DeleteNoteResult> {
   console.log('--- deleteSubjectNoteAction: INITIATED ---');
   console.log('Called for id:', id);
   try {
@@ -81,6 +91,16 @@ export async function deleteSubjectNoteAction(id: number): Promise<DeleteNoteRes
       console.error(`Failed to delete note ${id} from Baserow.`);
       return { success: false, error: 'Failed to delete note from Baserow.' };
     }
+
+    // Log activity
+    if (noteSubject && noteChapter) {
+        await logActivityAction({
+            Name: userNameForLog || noteSubject || "User",
+            Did: 'deleted note for subject',
+            Task: `${noteSubject} - ${noteChapter}`,
+        });
+    }
+    
     revalidatePath('/actions/create-subject-notes');
     console.log(`deleteSubjectNoteAction successful for id ${id}, path revalidated.`);
     console.log('--- deleteSubjectNoteAction: COMPLETED (Success) ---');
@@ -101,13 +121,14 @@ interface EditNoteResult {
 
 export async function editSubjectNoteAction(
   noteId: number,
-  newData: { subject: string; chapter: string; notes: string }
+  newData: { subject: string; chapter: string; notes: string },
+  userNameForLog?: string
 ): Promise<EditNoteResult> {
   console.log('--- editSubjectNoteAction: INITIATED ---');
   console.log(`Attempting to edit note with Baserow internal ID: ${noteId}`);
   console.log('Data received for update (from client form):', JSON.stringify(newData, null, 2));
 
-  const payloadToUpdate = {
+  const payloadToUpdate: Partial<Omit<SubjectNoteRecord, 'id' | 'order' | 'created_on' | 'updated_on'>> = {
     Subject: newData.subject,
     Chapter: newData.chapter,
     Notes: newData.notes,
@@ -117,15 +138,11 @@ export async function editSubjectNoteAction(
 
   try {
     const updatedNoteFromService = await updateSubjectNote(noteId, payloadToUpdate);
-
     console.log('Response from updateSubjectNote service (Baserow PATCH response):', JSON.stringify(updatedNoteFromService, null, 2));
 
     if (updatedNoteFromService && typeof updatedNoteFromService.id === 'number') {
-      // Basic check: if we got a row object with an ID back, assume success from Baserow's perspective.
-      // More stringent checks (comparing all fields) can be added if Baserow returns old data on a 200 OK.
       console.log(`editSubjectNoteAction: Update for noteId ${noteId} considered successful based on service response.`);
       
-      // Optional: Verify if returned data matches sent data for stricter success
       const dataMatched = 
           updatedNoteFromService.Subject === payloadToUpdate.Subject &&
           updatedNoteFromService.Chapter === payloadToUpdate.Chapter &&
@@ -133,8 +150,16 @@ export async function editSubjectNoteAction(
 
       if (!dataMatched) {
           console.warn(`POTENTIAL DATA MISMATCH for noteId ${noteId}: Baserow's response data does not exactly match the sent payload. The update might have occurred but Baserow's response differs. Sent: ${JSON.stringify(payloadToUpdate)}, Received: ${JSON.stringify(updatedNoteFromService)}`);
-          // For now, we proceed if we got a valid row object back. Stricter error handling can be implemented here if needed.
+      } else {
+          console.log(`Data verification successful for noteId ${noteId}.`);
       }
+
+      // Log activity
+      await logActivityAction({
+        Name: userNameForLog || updatedNoteFromService.Subject || "User",
+        Did: 'edited note for subject',
+        Task: `${updatedNoteFromService.Subject} - ${updatedNoteFromService.Chapter}`,
+      });
 
       revalidatePath('/actions/create-subject-notes');
       console.log(`editSubjectNoteAction: Path /actions/create-subject-notes revalidated for noteId ${noteId}.`);
