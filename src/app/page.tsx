@@ -17,7 +17,7 @@ import type { TaskRecord } from '@/services/baserowService';
 import OpmImage from './opm.png';
 import { useToast } from '@/hooks/use-toast';
 import { getActivityLogsAction, type ActivityLogClientEntry } from '@/app/actions/activityLogActions';
-import { formatTimeAgo } from '@/lib/utils';
+import * as Utils from '@/lib/utils'; // Changed import
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CheckCircle, MessageSquare, type LucideIcon } from 'lucide-react';
@@ -62,8 +62,8 @@ export default function DashboardRedesignPage() {
     try {
       const result = await getTasksForUserAction(email);
       if (result.success && result.tasks) {
-        const sortedTasks = result.tasks.sort((a, b) => (a.Due || "").localeCompare(b.Due || ""));
-        setAssignedTasks(sortedTasks.slice(0, 3)); 
+        // const sortedTasks = result.tasks.sort((a, b) => (a.Due || "").localeCompare(b.Due || ""));
+        setAssignedTasks(result.tasks.slice(0, 3)); 
       } else {
         setTasksError(result.error || "Failed to load tasks.");
       }
@@ -266,6 +266,7 @@ export default function DashboardRedesignPage() {
       <LoginDialog
         isOpen={showLoginDialog}
         onOpenChange={(isOpen) => {
+          // Prevent closing the dialog unless authenticated
           if (!isOpen && !isAuthenticated) {
             setShowLoginDialog(true); 
           } else {
@@ -546,7 +547,7 @@ export default function DashboardRedesignPage() {
                                 <span className="text-muted-foreground"> {activity.action}: </span>
                                 <span className="font-medium text-primary">{activity.subject}</span>
                               </p>
-                              <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
+                              <p className="text-xs text-muted-foreground">{Utils.formatTimeAgo(activity.timestamp)}</p>
                             </div>
                             <ActionIcon className={`h-4 w-4 ${iconColor} self-center`} />
                           </div>
@@ -569,3 +570,5 @@ export default function DashboardRedesignPage() {
     </div>
   );
 }
+
+    
