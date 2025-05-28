@@ -6,56 +6,41 @@ import { NewTopNav } from '@/components/dashboard/new-top-nav';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlugZap as PageIcon, Loader2, AlertTriangle, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
-// TODO: Implement Server Actions and Baserow Service for API Status
-// import { getApiStatusAction, type ApiStatusRecord } from '@/app/actions/apiStatusActions'; // Placeholder
+import { PlugZap as PageIcon, Loader2, AlertTriangle, CheckCircle, XCircle, RefreshCw, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
+import { getApiStatusesAction, type ApiStatusBaserowRecord } from '@/app/actions/apiStatusActions'; 
+// Dialog and form components will be needed to "Add New API"
+// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+// import { Input } from '@/components/ui/input';
+// import { Label } from '@/components/ui/label';
+// import { Switch } from '@/components/ui/switch';
+// import { useForm } from 'react-hook-form';
+// import { zodResolver } from '@hookform/resolvers/zod';
+// import { z } from 'zod';
 
-// Placeholder type
-interface ApiStatusRecord {
-  id: string; // Or number if from Baserow
-  apiName: string;
-  status: 'Operational' | 'Degraded' | 'Outage' | 'Unknown';
-  lastChecked: string; // ISO date string
-  responseTime?: string; // e.g., "120ms"
-  endpoint: string;
-}
+// Function to mask API Key (shows first 4 and last 4 chars)
+const maskApiKey = (apiKey?: string): string => {
+  if (!apiKey || apiKey.length < 8) return apiKey || 'N/A';
+  return `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}`;
+};
 
 export default function ApiStatusPage() {
   const { toast } = useToast();
-  const [apiStatuses, setApiStatuses] = useState<ApiStatusRecord[]>([]);
+  const [apiStatuses, setApiStatuses] = useState<ApiStatusBaserowRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // --- MOCK DATA & FUNCTIONS ---
-  const mockApiStatuses: ApiStatusRecord[] = [
-    { id: '1', apiName: 'Baserow User API', status: 'Operational', lastChecked: new Date().toISOString(), responseTime: '85ms', endpoint: 'https://api.baserow.io/api/user/' },
-    { id: '2', apiName: 'OpenAI GPT-4 API', status: 'Degraded', lastChecked: new Date(Date.now() - 5*60000).toISOString(), responseTime: '1500ms', endpoint: 'https://api.openai.com/v1/chat/completions' },
-    { id: '3', apiName: 'Internal Notifications API', status: 'Operational', lastChecked: new Date(Date.now() - 2*60000).toISOString(), responseTime: '30ms', endpoint: '/api/notifications' },
-    { id: '4', apiName: 'Third-party Analytics API', status: 'Outage', lastChecked: new Date(Date.now() - 10*60000).toISOString(), endpoint: 'https://analytics.example.com/api' },
-  ];
-  const mockGetApiStatusAction = async () => {
-    await new Promise(resolve => setTimeout(resolve, 700)); // Simulate delay
-    // Randomly change one status for demo
-    const randomIndex = Math.floor(Math.random() * mockApiStatuses.length);
-    const statuses: ('Operational' | 'Degraded' | 'Outage' | 'Unknown')[] = ['Operational', 'Degraded', 'Outage'];
-    mockApiStatuses[randomIndex].status = statuses[Math.floor(Math.random() * statuses.length)];
-    mockApiStatuses[randomIndex].lastChecked = new Date().toISOString();
-    return { success: true, statuses: [...mockApiStatuses].sort((a,b) => a.apiName.localeCompare(b.apiName)) };
-  };
-  // --- END MOCK ---
+  // const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const fetchApiStatuses = async () => {
     setIsLoading(true); setError(null);
     try {
-      // const result = await getApiStatusAction();
-      const result = await mockGetApiStatusAction();
+      const result = await getApiStatusesAction();
       if (result.success && result.statuses) {
         setApiStatuses(result.statuses);
       } else {
-        setError("Failed to load API statuses."); // result.error
-        toast({ variant: "destructive", title: "Error", description: "Failed to load API statuses." });
+        setError(result.error || "Failed to load API statuses.");
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to load API statuses." });
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
@@ -67,27 +52,20 @@ export default function ApiStatusPage() {
 
   useEffect(() => {
     fetchApiStatuses();
-    const interval = setInterval(fetchApiStatuses, 60000); // Refresh every minute
-    return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getStatusIndicator = (status: ApiStatusRecord['status']) => {
-    switch (status) {
-      case 'Operational': return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'Degraded': return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
-      case 'Outage': return <XCircle className="h-5 w-5 text-red-500" />;
-      default: return <AlertTriangle className="h-5 w-5 text-gray-500" />;
-    }
+  const getStatusIndicator = (active?: boolean) => {
+    if (active === undefined) return <AlertTriangle className="h-5 w-5 text-gray-500" title="Unknown Status" />;
+    return active ? <CheckCircle className="h-5 w-5 text-green-500" title="Active" /> : <XCircle className="h-5 w-5 text-red-500" title="Inactive"/>;
   };
 
-  const formatLastChecked = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleString();
-    } catch {
-      return 'N/A';
-    }
+  // Placeholder for Add API functionality
+  const handleAddNewApi = () => {
+    // setIsAddDialogOpen(true);
+    toast({title: "Feature Coming Soon", description: "Adding new API entries will be implemented."});
   };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -100,23 +78,29 @@ export default function ApiStatusPage() {
               <h1 className="text-4xl font-bold tracking-tight">API in Use</h1>
             </div>
             <p className="text-lg text-muted-foreground ml-13">
-              Monitor the status and usage of currently active APIs. (Specific Baserow table TBD)
+              Monitor the status and usage of currently active APIs. (Table ID: 542782)
             </p>
           </div>
-           <Button onClick={fetchApiStatuses} variant="outline" disabled={isLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh Status
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={fetchApiStatuses} variant="outline" disabled={isLoading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh Status
+            </Button>
+             <Button onClick={handleAddNewApi} variant="default">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add New API
+            </Button>
+          </div>
         </section>
 
         <section className="space-y-6">
            <Card>
             <CardHeader>
               <CardTitle>API Status Dashboard</CardTitle>
-              <CardDescription>Real-time status and metrics for integrated APIs.</CardDescription>
+              <CardDescription>Real-time status and details for integrated APIs.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              {isLoading && apiStatuses.length === 0 ? ( // Show loader only on initial load
+              {isLoading && apiStatuses.length === 0 ? ( 
                 <div className="flex items-center justify-center py-20">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="ml-2">Loading API statuses...</p>
@@ -134,11 +118,11 @@ export default function ApiStatusPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[50px]"></TableHead>
-                        <TableHead>API Name</TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Used In</TableHead>
+                        <TableHead>API Key (Masked)</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Response Time</TableHead>
-                        <TableHead>Endpoint</TableHead>
-                        <TableHead className="text-right">Last Checked</TableHead>
+                        <TableHead>By</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -151,20 +135,20 @@ export default function ApiStatusPage() {
                       ) : (
                         apiStatuses.map((api) => (
                           <TableRow key={api.id}>
-                            <TableCell>{getStatusIndicator(api.status)}</TableCell>
-                            <TableCell className="font-medium">{api.apiName}</TableCell>
+                            <TableCell>{getStatusIndicator(api.Active)}</TableCell>
+                            <TableCell className="font-medium">{api.ID || 'N/A'}</TableCell>
+                            <TableCell>{api['Used In'] || 'N/A'}</TableCell>
+                            <TableCell className="font-mono text-sm text-muted-foreground">{maskApiKey(api['API Key'])}</TableCell>
                             <TableCell>
                               <span className={`px-2 py-1 text-xs rounded-full font-semibold ${
-                                api.status === 'Operational' ? 'bg-green-100 text-green-700' :
-                                api.status === 'Degraded' ? 'bg-yellow-100 text-yellow-700' :
-                                api.status === 'Outage' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                                api.Active ? 'bg-green-100 text-green-700 dark:bg-green-800/30 dark:text-green-300' :
+                                api.Active === false ? 'bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-300' : 
+                                'bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-300'
                               }`}>
-                                {api.status}
+                                {api.Active ? 'Active' : api.Active === false ? 'Inactive' : 'Unknown'}
                               </span>
                             </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{api.responseTime || 'N/A'}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground truncate max-w-xs">{api.endpoint}</TableCell>
-                            <TableCell className="text-right text-sm text-muted-foreground">{formatLastChecked(api.lastChecked)}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{api.By || 'N/A'}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -175,9 +159,109 @@ export default function ApiStatusPage() {
             </CardContent>
           </Card>
         </section>
+        {/* Placeholder for Add API Dialog. Will be implemented later if requested. */}
+        {/* <AddApiDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onApiAdded={fetchApiStatuses} /> */}
       </main>
     </div>
   );
 }
 
+// Placeholder component for Add API Dialog
+/*
+const addApiSchema = z.object({
+  ID: z.string().optional(), // Or z.number() if it's always numeric
+  'Used In': z.string().min(1, "Usage location is required."),
+  'API Key': z.string().min(1, "API Key is required."),
+  'Active': z.boolean().default(true),
+  'By': z.string().min(1, "Submitter name is required."),
+});
+type AddApiFormData = z.infer<typeof addApiSchema>;
+
+interface AddApiDialogProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  onApiAdded: () => void; // Callback to refresh the list
+}
+
+function AddApiDialog({ isOpen, onOpenChange, onApiAdded }: AddApiDialogProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<AddApiFormData>({
+    resolver: zodResolver(addApiSchema),
+    defaultValues: { Active: true }
+  });
+
+  const onSubmit: SubmitHandler<AddApiFormData> = async (data) => {
+    setIsSubmitting(true);
+    try {
+      const result = await addApiStatusAction(data);
+      if (result.success) {
+        toast({ title: "API Entry Added", description: "New API status has been successfully logged." });
+        onApiAdded();
+        onOpenChange(false);
+        reset();
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.error || "Failed to add API status." });
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Submission Error", description: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add New API Status</DialogTitle>
+          <DialogDescription>Enter the details for the API you want to track.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
+          <div>
+            <Label htmlFor="api-id">ID (Optional)</Label>
+            <Input id="api-id" {...register('ID')} disabled={isSubmitting} />
+          </div>
+          <div>
+            <Label htmlFor="used-in">Used In <span className="text-destructive">*</span></Label>
+            <Input id="used-in" {...register('Used In')} disabled={isSubmitting} />
+            {errors['Used In'] && <p className="text-sm text-destructive mt-1">{errors['Used In'].message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="api-key">API Key <span className="text-destructive">*</span></Label>
+            <Input id="api-key" type="password" {...register('API Key')} disabled={isSubmitting} />
+            {errors['API Key'] && <p className="text-sm text-destructive mt-1">{errors['API Key'].message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="by">By <span className="text-destructive">*</span></Label>
+            <Input id="by" {...register('By')} disabled={isSubmitting} />
+            {errors.By && <p className="text-sm text-destructive mt-1">{errors.By.message}</p>}
+          </div>
+          <div className="flex items-center space-x-2">
+             <Controller
+                control={control}
+                name="Active"
+                render={({ field }) => (
+                    <Switch
+                        id="active-switch"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isSubmitting}
+                    />
+                )}
+            />
+            <Label htmlFor="active-switch">Active</Label>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Add API"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+*/
     
