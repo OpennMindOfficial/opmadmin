@@ -11,7 +11,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: 'OpennMind Dashboard',
-  description: 'Task Management Dashboard',
+  description: 'The Task Management Dashboard for OpennMind.', // Slightly changed description
 };
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body className={`${poppins.variable} font-sans antialiased`}>
         {children}
         <Toaster />
