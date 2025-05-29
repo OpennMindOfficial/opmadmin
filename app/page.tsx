@@ -14,7 +14,7 @@ import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { updateUserLastActive } from '@/app/actions/authActions';
 import { getTasksForUserAction } from '@/app/actions/taskActions'; 
 import type { TaskRecord } from '@/services/baserowService'; 
-// Removed: import OpmImage from './opm.png';
+// Removed: import OpmImage from './opm.png'; 
 import { useToast } from '@/hooks/use-toast';
 import { getActivityLogsAction, type ActivityLogClientEntry } from '@/app/actions/activityLogActions';
 import * as Utils from '@/lib/utils';
@@ -121,6 +121,7 @@ export default function DashboardRedesignPage() {
       setIsAuthenticated(false); 
       setShowLoginDialog(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -294,7 +295,7 @@ export default function DashboardRedesignPage() {
               transition={{ duration: 3, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
             >
               <Image
-                src="/opm.png" // Changed to use public directory path
+                src="/opm.png" // Changed path
                 alt="OpennMind Application Logo"
                 width={600}
                 height={400}
@@ -566,4 +567,5 @@ export default function DashboardRedesignPage() {
     </div>
   );
 }
+
     
