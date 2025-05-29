@@ -12,8 +12,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'OpennMind Dashboard App', // Slightly changed title
-  description: 'The Task Management Dashboard for the OpennMind Platform.', // Slightly rephrased
+  title: 'OpennMind Dashboard App', // Slightly changed title for file update
+  description: 'The Task Management Dashboard for the OpennMind Platform.',
 };
 
 export default function RootLayout({
